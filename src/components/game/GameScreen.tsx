@@ -14,8 +14,11 @@ import GameOverScreen from './GameOverScreen';
 import StatusBar from './StatusBar';
 import JobModal from './JobModal';
 import CrimeModal, { CrimeResult } from './CrimeModal';
+import RelationshipModal from './RelationshipModal';
+import { RelationshipState, Partner } from '@/types/relationship';
+import { createRelationshipState, generateChild, ageChildren } from '@/lib/relationshipSystem';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull } from 'lucide-react';
+import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -35,10 +38,12 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const [currentMinigame, setCurrentMinigame] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
   
-  // Job and Crime modals
+  // Job, Crime, and Relationship modals
   const [showJobModal, setShowJobModal] = useState(false);
   const [showCrimeModal, setShowCrimeModal] = useState(false);
+  const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [hasBabysitterJob, setHasBabysitterJob] = useState(false);
+  const [relationshipState, setRelationshipState] = useState<RelationshipState>(createRelationshipState());
 
   // Start ambient music on mount
   useEffect(() => {
@@ -284,6 +289,64 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
 
   // Check if player can access crime (18+)
   const canAccessCrime = gameState.player.age >= 18 && !gameState.player.inPrison;
+  const canAccessRelationship = gameState.player.age >= 16;
+
+  // Relationship handlers
+  const handleFindPartner = (partner: Partner) => {
+    setRelationshipState(prev => ({ ...prev, partner }));
+    toast.success(`Du bist jetzt mit ${partner.name} zusammen! 💕`);
+  };
+
+  const handleBreakup = () => {
+    if (relationshipState.partner) {
+      toast.info(`Du hast dich von ${relationshipState.partner.name} getrennt.`);
+      setRelationshipState(prev => ({
+        ...prev,
+        partner: null,
+        exPartners: prev.partner ? [...prev.exPartners, prev.partner] : prev.exPartners
+      }));
+    }
+  };
+
+  const handleMarry = () => {
+    if (relationshipState.partner) {
+      soundManager.playPositiveEffect();
+      toast.success(`Du hast ${relationshipState.partner.name} geheiratet! 💍`);
+      setRelationshipState(prev => ({
+        ...prev,
+        partner: prev.partner ? { ...prev.partner, relationshipStatus: 'married' } : null,
+        totalMarriages: prev.totalMarriages + 1
+      }));
+    }
+  };
+
+  const handleDivorce = () => {
+    if (relationshipState.partner) {
+      soundManager.playNegativeEffect();
+      toast.error(`Du hast dich von ${relationshipState.partner.name} scheiden lassen.`);
+      setRelationshipState(prev => ({
+        ...prev,
+        partner: null,
+        exPartners: prev.partner ? [...prev.exPartners, { ...prev.partner, relationshipStatus: 'divorced' }] : prev.exPartners,
+        totalDivorces: prev.totalDivorces + 1
+      }));
+    }
+  };
+
+  const handleTryForChild = () => {
+    const chance = Math.random();
+    if (chance < 0.4) {
+      const child = generateChild(gameState.player.birthYear, gameState.year);
+      soundManager.playPositiveEffect();
+      toast.success(`Ein Baby wurde geboren: ${child.name}! 👶`);
+      setRelationshipState(prev => ({
+        ...prev,
+        children: [...prev.children, child]
+      }));
+    } else {
+      toast.info('Dieses Jahr hat es leider nicht geklappt.');
+    }
+  };
 
   const goToCasino = () => {
     // Save current game state before navigating
@@ -343,6 +406,18 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
                 title="Kriminalität"
               >
                 <Skull className="h-4 w-4" />
+              </Button>
+            )}
+            {/* Relationship Button - 16+ */}
+            {canAccessRelationship && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setShowRelationshipModal(true)} 
+                className="text-pink-500 h-8 w-8 md:h-10 md:w-10"
+                title="Beziehungen"
+              >
+                <Heart className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -442,6 +517,19 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onClose={() => setShowCrimeModal(false)}
         player={gameState.player}
         onCrimeResult={handleCrimeResult}
+      />
+
+      {/* Relationship Modal */}
+      <RelationshipModal
+        isOpen={showRelationshipModal}
+        onClose={() => setShowRelationshipModal(false)}
+        player={gameState.player}
+        relationshipState={relationshipState}
+        onFindPartner={handleFindPartner}
+        onBreakup={handleBreakup}
+        onMarry={handleMarry}
+        onDivorce={handleDivorce}
+        onTryForChild={handleTryForChild}
       />
     </div>
   );

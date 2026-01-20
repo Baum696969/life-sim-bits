@@ -14,7 +14,7 @@ interface MathQuestion {
   options: number[];
 }
 
-const TIME_PER_QUESTION = 12; // 12 seconds per question
+const TIME_PER_QUESTION = 10; // 10 seconds per question
 
 const MathGame = ({ onComplete }: MathGameProps) => {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'result' | 'gameover'>('ready');
@@ -25,6 +25,36 @@ const MathGame = ({ onComplete }: MathGameProps) => {
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [difficulty, setDifficulty] = useState(1);
   const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
+  const [timerActive, setTimerActive] = useState(false);
+
+  // Timer effect
+  useEffect(() => {
+    if (!timerActive || gameState !== 'playing') return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          soundManager.playTimerTick();
+          handleTimeUp();
+          return TIME_PER_QUESTION;
+        }
+        if (prev <= 3) {
+          soundManager.playTimerTick();
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timerActive, gameState, question]);
+
+  const handleTimeUp = () => {
+    if (gameState !== 'playing' || !question) return;
+    setSelectedAnswer(-1);
+    setIsCorrect(false);
+    setGameState('result');
+    soundManager.playNegativeEffect();
+  };
 
   const generateQuestion = (diff: number): MathQuestion => {
     const operations = ['+', '-', '*'];
@@ -78,12 +108,15 @@ const MathGame = ({ onComplete }: MathGameProps) => {
     setCorrectAnswers(0);
     setSelectedAnswer(null);
     setIsCorrect(null);
+    setTimeLeft(TIME_PER_QUESTION);
+    setTimerActive(true);
     setGameState('playing');
   };
 
   const handleAnswer = (answer: number) => {
     if (gameState !== 'playing' || !question) return;
     
+    setTimerActive(false);
     const correct = answer === question.correctAnswer;
     setSelectedAnswer(answer);
     setIsCorrect(correct);
@@ -102,6 +135,7 @@ const MathGame = ({ onComplete }: MathGameProps) => {
     setQuestionsAnswered(newCount);
     
     if (newCount >= 5) {
+      setTimerActive(false);
       setGameState('gameover');
       
       const score = correctAnswers + (isCorrect ? 1 : 0);
@@ -129,6 +163,8 @@ const MathGame = ({ onComplete }: MathGameProps) => {
       setQuestion(generateQuestion(difficulty));
       setSelectedAnswer(null);
       setIsCorrect(null);
+      setTimeLeft(TIME_PER_QUESTION);
+      setTimerActive(true);
       setGameState('playing');
     }
   };
@@ -161,6 +197,24 @@ const MathGame = ({ onComplete }: MathGameProps) => {
         <>
           <div className="text-xs md:text-sm text-muted-foreground">
             Frage {questionsAnswered + 1}/5 | Richtig: {correctAnswers}
+          </div>
+          
+          {/* Timer Bar */}
+          <div className="w-full max-w-md">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className={`text-sm font-bold ${timeLeft <= 3 ? 'text-destructive animate-pulse' : 'text-foreground'}`}>
+                {timeLeft}s
+              </span>
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <motion.div 
+                className={`h-full ${timeLeft <= 3 ? 'bg-destructive' : 'bg-primary'}`}
+                initial={{ width: '100%' }}
+                animate={{ width: `${(timeLeft / TIME_PER_QUESTION) * 100}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
           </div>
           
           <AnimatePresence mode="wait">
