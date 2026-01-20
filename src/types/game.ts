@@ -131,8 +131,11 @@ export type MinigameType =
   | 'puzzle'
   | 'blackjack'
   | 'math'
-  | 'sequence'     // Merkspiel
-  | 'spaceshooter'; // Weltraum-Shooter
+  | 'sequence'
+  | 'spaceshooter'
+  | 'bottles'
+  | 'english'
+  | 'german';
 
 export interface MinigameResult {
   type: MinigameType;
