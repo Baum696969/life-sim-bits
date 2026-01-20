@@ -4,6 +4,11 @@ import SnakeGame from '../minigames/SnakeGame';
 import MemoryGame from '../minigames/MemoryGame';
 import PuzzleGame from '../minigames/PuzzleGame';
 import MathGame from '../minigames/MathGame';
+import SequenceGame from '../minigames/SequenceGame';
+import SpaceShooter from '../minigames/SpaceShooter';
+import BottleCollector from '../minigames/BottleCollector';
+import EnglishTest from '../minigames/EnglishTest';
+import GermanTest from '../minigames/GermanTest';
 
 interface MinigameModalProps {
   isOpen: boolean;
@@ -11,9 +16,10 @@ interface MinigameModalProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
   onClose: () => void;
   playerMoney: number;
+  playerAge?: number;
 }
 
-const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney }: MinigameModalProps) => {
+const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney, playerAge }: MinigameModalProps) => {
   const renderMinigame = () => {
     switch (minigame) {
       case 'flappy':
@@ -26,14 +32,24 @@ const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney }: M
         return <PuzzleGame onComplete={onComplete} />;
       case 'math':
         return <MathGame onComplete={onComplete} />;
+      case 'sequence':
+        return <SequenceGame onComplete={onComplete} playerAge={playerAge} />;
+      case 'spaceshooter':
+        return <SpaceShooter onComplete={onComplete} />;
+      case 'bottles':
+        return <BottleCollector onComplete={onComplete} />;
+      case 'english':
+        return <EnglishTest onComplete={onComplete} playerAge={playerAge} />;
+      case 'german':
+        return <GermanTest onComplete={onComplete} playerAge={playerAge} />;
       default:
-        return <div>Minigame nicht gefunden</div>;
+        return <div className="text-center p-8">Minigame nicht gefunden</div>;
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl bg-card border-primary/30">
+      <DialogContent className="max-w-4xl bg-card border-primary/30 max-h-[90vh] overflow-y-auto">
         {renderMinigame()}
       </DialogContent>
     </Dialog>
