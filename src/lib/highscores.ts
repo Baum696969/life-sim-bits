@@ -66,6 +66,9 @@ export const getMinigameLabel = (type: MinigameType): string => {
     math: 'Mathe-Test',
     sequence: 'Merkspiel',
     spaceshooter: 'Space Shooter',
+    bottles: 'Flaschensammeln',
+    english: 'Englisch-Test',
+    german: 'Deutsch-Test',
   };
   return labels[type];
 };

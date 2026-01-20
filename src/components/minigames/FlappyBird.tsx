@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play } from 'lucide-react';
+import { Play, Heart } from 'lucide-react';
 import { soundManager } from '@/lib/soundManager';
 
 interface FlappyBirdProps {
@@ -8,36 +8,37 @@ interface FlappyBirdProps {
 }
 
 // Dynamic difficulty - starts easy, gets harder
-const BASE_GRAVITY = 0.25; // Much lower initial gravity
-const BASE_JUMP_FORCE = -5; // Softer jump
-const BASE_PIPE_SPEED = 2; // Slower initial speed
-const PIPE_GAP = 180; // Wider gap for easier start
+const BASE_GRAVITY = 0.25;
+const BASE_JUMP_FORCE = -5;
+const BASE_PIPE_SPEED = 2;
+const PIPE_GAP = 180;
 const PIPE_WIDTH = 60;
 const BIRD_SIZE = 30;
+const MAX_LIVES = 3;
 
 // Difficulty scaling
 const getDynamicValues = (score: number) => {
-  // Every 5 points, increase difficulty
-  const tier = Math.min(Math.floor(score / 5), 5); // Max 5 tiers
+  const tier = Math.min(Math.floor(score / 5), 5);
   
   return {
-    gravity: BASE_GRAVITY + (tier * 0.05), // 0.25 -> 0.5 max
-    jumpForce: BASE_JUMP_FORCE - (tier * 0.5), // -5 -> -7.5 max
-    pipeSpeed: BASE_PIPE_SPEED + (tier * 0.4), // 2 -> 4 max
+    gravity: BASE_GRAVITY + (tier * 0.05),
+    jumpForce: BASE_JUMP_FORCE - (tier * 0.5),
+    pipeSpeed: BASE_PIPE_SPEED + (tier * 0.4),
   };
 };
 
 const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [gameState, setGameState] = useState<'ready' | 'countdown' | 'playing' | 'gameover'>('ready');
+  const [gameState, setGameState] = useState<'ready' | 'playing' | 'hit' | 'gameover'>('ready');
   const [score, setScore] = useState(0);
-  const [countdown, setCountdown] = useState(3);
+  const [lives, setLives] = useState(MAX_LIVES);
   const [canvasSize, setCanvasSize] = useState({ width: 400, height: 400 });
   
   const birdRef = useRef({ y: 200, velocity: 0 });
   const pipesRef = useRef<{ x: number; topHeight: number; passed: boolean }[]>([]);
   const frameRef = useRef<number>();
   const scoreRef = useRef(0);
+  const livesRef = useRef(MAX_LIVES);
 
   // Responsive canvas size
   useEffect(() => {
@@ -50,62 +51,68 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Countdown timer
-  useEffect(() => {
-    if (gameState === 'countdown') {
-      if (countdown > 0) {
-        const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-        return () => clearTimeout(timer);
-      } else {
-        setGameState('playing');
-      }
-    }
-  }, [gameState, countdown]);
-
   const jump = useCallback(() => {
-    if (gameState === 'playing') {
+    if (gameState === 'ready') {
+      // First jump starts the game
+      setGameState('playing');
+      soundManager.playMinigameStart();
+      const { jumpForce } = getDynamicValues(0);
+      birdRef.current.velocity = jumpForce;
+      soundManager.playClick();
+    } else if (gameState === 'playing') {
       const { jumpForce } = getDynamicValues(scoreRef.current);
       birdRef.current.velocity = jumpForce;
       soundManager.playClick();
     }
   }, [gameState]);
 
-  const startGame = () => {
+  const resetPosition = () => {
     birdRef.current = { y: canvasSize.height / 2, velocity: 0 };
-    pipesRef.current = [];
-    scoreRef.current = 0;
-    setScore(0);
-    setCountdown(3);
-    setGameState('countdown');
   };
 
-  const endGame = useCallback(() => {
-    setGameState('gameover');
-    if (frameRef.current) {
-      cancelAnimationFrame(frameRef.current);
-    }
+  const handleHit = useCallback(() => {
+    soundManager.playHit();
+    livesRef.current -= 1;
+    setLives(livesRef.current);
     
-    const finalScore = scoreRef.current;
-    const moneyEarned = finalScore * 10;
-    const fitnessGain = finalScore >= 5 ? 2 : 0;
-    
-    if (finalScore >= 3) {
-      soundManager.playMinigameWin();
+    if (livesRef.current <= 0) {
+      // Game over
+      setGameState('gameover');
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+      }
+      
+      const finalScore = scoreRef.current;
+      const moneyEarned = finalScore * 10;
+      const fitnessGain = finalScore >= 5 ? 2 : 0;
+      
+      if (finalScore >= 3) {
+        soundManager.playMinigameWin();
+      } else {
+        soundManager.playMinigameLose();
+      }
+      
+      setTimeout(() => {
+        onComplete({
+          score: finalScore,
+          won: finalScore >= 3,
+          effects: {
+            moneyDelta: moneyEarned,
+            fitnessDelta: fitnessGain,
+          },
+        });
+      }, 1500);
     } else {
-      soundManager.playMinigameLose();
+      // Respawn with invincibility frame
+      setGameState('hit');
+      soundManager.playHealthDown();
+      resetPosition();
+      
+      setTimeout(() => {
+        setGameState('playing');
+      }, 1000);
     }
-    
-    setTimeout(() => {
-      onComplete({
-        score: finalScore,
-        won: finalScore >= 3,
-        effects: {
-          moneyDelta: moneyEarned,
-          fitnessDelta: fitnessGain,
-        },
-      });
-    }, 1500);
-  }, [onComplete]);
+  }, [onComplete, canvasSize.height]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -116,10 +123,9 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
     const { width, height } = canvasSize;
 
     const gameLoop = () => {
-      if (gameState !== 'playing') return;
+      if (gameState !== 'playing' && gameState !== 'hit') return;
 
-      // Get dynamic difficulty based on current score
-      const { gravity, jumpForce, pipeSpeed } = getDynamicValues(scoreRef.current);
+      const { gravity, pipeSpeed } = getDynamicValues(scoreRef.current);
 
       birdRef.current.velocity += gravity;
       birdRef.current.y += birdRef.current.velocity;
@@ -144,23 +150,28 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
       const birdY = birdRef.current.y;
       const birdX = 50;
       
-      if (birdY < 0 || birdY + BIRD_SIZE > height) {
-        endGame();
-        return;
-      }
+      // Collision detection only when not in hit state
+      if (gameState === 'playing') {
+        if (birdY < 0 || birdY + BIRD_SIZE > height) {
+          handleHit();
+          return;
+        }
 
-      for (const pipe of pipesRef.current) {
-        if (birdX + BIRD_SIZE > pipe.x && birdX < pipe.x + PIPE_WIDTH) {
-          if (birdY < pipe.topHeight || birdY + BIRD_SIZE > pipe.topHeight + PIPE_GAP) {
-            endGame();
-            return;
+        for (const pipe of pipesRef.current) {
+          if (birdX + BIRD_SIZE > pipe.x && birdX < pipe.x + PIPE_WIDTH) {
+            if (birdY < pipe.topHeight || birdY + BIRD_SIZE > pipe.topHeight + PIPE_GAP) {
+              handleHit();
+              return;
+            }
           }
         }
       }
 
+      // Draw
       ctx.fillStyle = '#0a0a0f';
       ctx.fillRect(0, 0, width, height);
 
+      // Draw pipes
       ctx.fillStyle = '#22c55e';
       pipesRef.current.forEach(pipe => {
         ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
@@ -172,20 +183,24 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
         ctx.fillStyle = '#22c55e';
       });
 
-      ctx.fillStyle = '#fbbf24';
-      ctx.beginPath();
-      ctx.arc(birdX + BIRD_SIZE / 2, birdY + BIRD_SIZE / 2, BIRD_SIZE / 2, 0, Math.PI * 2);
-      ctx.fill();
-      
-      ctx.fillStyle = '#000';
-      ctx.beginPath();
-      ctx.arc(birdX + BIRD_SIZE / 2 + 5, birdY + BIRD_SIZE / 2 - 5, 4, 0, Math.PI * 2);
-      ctx.fill();
+      // Draw bird (flashing when hit)
+      const isFlashing = gameState === 'hit' && Math.floor(Date.now() / 100) % 2 === 0;
+      if (!isFlashing) {
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(birdX + BIRD_SIZE / 2, birdY + BIRD_SIZE / 2, BIRD_SIZE / 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(birdX + BIRD_SIZE / 2 + 5, birdY + BIRD_SIZE / 2 - 5, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       frameRef.current = requestAnimationFrame(gameLoop);
     };
 
-    if (gameState === 'playing') {
+    if (gameState === 'playing' || gameState === 'hit') {
       frameRef.current = requestAnimationFrame(gameLoop);
     }
 
@@ -194,27 +209,43 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
         cancelAnimationFrame(frameRef.current);
       }
     };
-  }, [gameState, endGame, canvasSize]);
+  }, [gameState, handleHit, canvasSize]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        if (gameState === 'ready') {
-          startGame();
-        } else {
-          jump();
-        }
+        jump();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, jump]);
+  }, [jump]);
+
+  const handleRestart = () => {
+    birdRef.current = { y: canvasSize.height / 2, velocity: 0 };
+    pipesRef.current = [];
+    scoreRef.current = 0;
+    livesRef.current = MAX_LIVES;
+    setScore(0);
+    setLives(MAX_LIVES);
+    setGameState('ready');
+  };
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <h2 className="font-display text-xl md:text-2xl text-primary">Flappy Bird</h2>
+      <div className="flex items-center justify-between w-full max-w-[400px]">
+        <h2 className="font-display text-xl md:text-2xl text-primary">Flappy Bird</h2>
+        <div className="flex items-center gap-1">
+          {Array.from({ length: MAX_LIVES }).map((_, i) => (
+            <Heart
+              key={i}
+              className={`h-5 w-5 ${i < lives ? 'text-red-500 fill-red-500' : 'text-muted-foreground'}`}
+            />
+          ))}
+        </div>
+      </div>
       
       <div className="relative">
         <canvas
@@ -222,32 +253,24 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
           width={canvasSize.width}
           height={canvasSize.height}
           className="rounded-lg border-2 border-primary/30 cursor-pointer touch-none"
-          onClick={() => {
-            if (gameState === 'ready') startGame();
-            else jump();
-          }}
+          onClick={jump}
           onTouchStart={(e) => {
             e.preventDefault();
-            if (gameState === 'ready') startGame();
-            else jump();
+            jump();
           }}
         />
         
         {gameState === 'ready' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 rounded-lg">
-            <p className="text-muted-foreground mb-4 text-sm md:text-base text-center px-4">Tippe oder drücke Space zum Springen!</p>
-            <Button onClick={startGame} className="game-btn bg-primary">
-              <Play className="mr-2 h-4 w-4" /> Start
-            </Button>
-          </div>
-        )}
-
-        {gameState === 'countdown' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 rounded-lg">
-            <p className="text-6xl md:text-8xl font-display text-primary animate-pulse">
-              {countdown === 0 ? 'LOS!' : countdown}
+            <p className="text-muted-foreground mb-2 text-sm md:text-base text-center px-4">
+              Tippe oder drücke Space zum Starten!
             </p>
-            <p className="text-muted-foreground mt-4">Mach dich bereit!</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Du hast {MAX_LIVES} Leben
+            </p>
+            <Button onClick={jump} className="game-btn bg-primary">
+              <Play className="mr-2 h-4 w-4" /> Tippe zum Springen
+            </Button>
           </div>
         )}
         

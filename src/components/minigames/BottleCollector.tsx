@@ -17,8 +17,10 @@ interface Bottle {
 const GAME_DURATION = 30; // 30 seconds
 const SPAWN_INTERVAL = 1000; // 1 second
 const BOTTLES_PER_SPAWN = 2;
+const BOTTLES_PER_SPAWN_FINAL = 4; // 2x in last 10 seconds
 const DESPAWN_TIME = 5000; // 5 seconds
 const BOTTLE_VALUE = 0.25; // €0.25 per bottle
+const FINAL_PHASE_START = 10; // Last 10 seconds
 
 const BottleCollector = ({ onComplete }: BottleCollectorProps) => {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'gameover'>('ready');
@@ -54,7 +56,10 @@ const BottleCollector = ({ onComplete }: BottleCollectorProps) => {
     const now = Date.now();
     const newBottles: Bottle[] = [];
     
-    for (let i = 0; i < BOTTLES_PER_SPAWN; i++) {
+    // Double spawn rate in final 10 seconds
+    const spawnCount = timeLeft <= FINAL_PHASE_START ? BOTTLES_PER_SPAWN_FINAL : BOTTLES_PER_SPAWN;
+    
+    for (let i = 0; i < spawnCount; i++) {
       newBottles.push({
         id: bottleIdRef.current++,
         x: Math.random() * (canvasSize.width - 40) + 20,
@@ -68,7 +73,7 @@ const BottleCollector = ({ onComplete }: BottleCollectorProps) => {
       const filtered = prev.filter(b => now - b.spawnTime < DESPAWN_TIME);
       return [...filtered, ...newBottles];
     });
-  }, [canvasSize]);
+  }, [canvasSize, timeLeft]);
 
   const collectBottle = (bottleId: number) => {
     setBottles(prev => prev.filter(b => b.id !== bottleId));

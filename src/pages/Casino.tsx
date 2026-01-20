@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Minus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowLeft, Plus, Minus, Lock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, BlackjackHand, BlackjackState, Suit, Rank } from '@/types/game';
 import { loadGame, saveGame, formatMoney } from '@/lib/gameUtils';
+import { soundManager } from '@/lib/soundManager';
 
 const SUITS: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
 const RANKS: Rank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const MIN_AGE = 16;
 
 const createDeck = (): Card[] => {
   const deck: Card[] = [];
@@ -41,14 +43,15 @@ const calculateHandValue = (cards: Card[]): number => {
     values = [...new Set(newValues)];
   }
   
-  // Get best value (highest that's <= 21)
   const validValues = values.filter(v => v <= 21);
   if (validValues.length > 0) return Math.max(...validValues);
   return Math.min(...values);
 };
 
 const Casino = () => {
+  const navigate = useNavigate();
   const [playerMoney, setPlayerMoney] = useState(1000);
+  const [playerAge, setPlayerAge] = useState(0);
   const [bet, setBet] = useState(50);
   const [gamePhase, setGamePhase] = useState<'betting' | 'playing' | 'dealerTurn' | 'finished'>('betting');
   const [playerHand, setPlayerHand] = useState<Card[]>([]);
@@ -61,8 +64,32 @@ const Casino = () => {
     const saved = loadGame();
     if (saved) {
       setPlayerMoney(saved.player.money);
+      setPlayerAge(saved.player.age);
     }
   }, []);
+
+  // Check age restriction
+  if (playerAge < MIN_AGE && playerAge > 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <Lock className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h1 className="font-display text-3xl text-primary mb-4">Casino</h1>
+          <p className="text-muted-foreground mb-6">
+            Du musst mindestens {MIN_AGE} Jahre alt sein, um das Casino zu betreten.
+          </p>
+          <p className="text-lg text-foreground mb-6">
+            Dein Alter: {playerAge} Jahre
+          </p>
+          <Link to="/">
+            <Button className="game-btn">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Zurück zum Spiel
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const dealCard = (currentDeck: Card[], faceUp = true): [Card, Card[]] => {
     const newDeck = [...currentDeck];
@@ -73,15 +100,15 @@ const Casino = () => {
   const startGame = () => {
     if (bet > playerMoney) return;
     
+    soundManager.playCardFlip();
     let newDeck = createDeck();
     const newPlayerHand: Card[] = [];
     const newDealerHand: Card[] = [];
     
-    // Deal initial cards
     let card: Card;
     [card, newDeck] = dealCard(newDeck);
     newPlayerHand.push(card);
-    [card, newDeck] = dealCard(newDeck, false); // Dealer's first card face down
+    [card, newDeck] = dealCard(newDeck, false);
     newDealerHand.push(card);
     [card, newDeck] = dealCard(newDeck);
     newPlayerHand.push(card);
@@ -95,10 +122,8 @@ const Casino = () => {
     setResult(null);
     setWinAmount(0);
     
-    // Check for blackjack
     const playerValue = calculateHandValue(newPlayerHand);
     if (playerValue === 21) {
-      // Reveal dealer's card
       newDealerHand[0].faceUp = true;
       setDealerHand([...newDealerHand]);
       const dealerValue = calculateHandValue(newDealerHand);
@@ -112,6 +137,7 @@ const Casino = () => {
   };
 
   const hit = () => {
+    soundManager.playCardFlip();
     let [card, newDeck] = dealCard(deck);
     const newHand = [...playerHand, card];
     setPlayerHand(newHand);
@@ -126,11 +152,9 @@ const Casino = () => {
   const stand = () => {
     setGamePhase('dealerTurn');
     
-    // Reveal dealer's hidden card
     const revealedDealerHand = dealerHand.map(c => ({ ...c, faceUp: true }));
     setDealerHand(revealedDealerHand);
     
-    // Dealer draws
     let currentDeck = [...deck];
     let currentHand = [...revealedDealerHand];
     
@@ -139,6 +163,7 @@ const Casino = () => {
       
       if (dealerValue < 17) {
         setTimeout(() => {
+          soundManager.playCardFlip();
           let [card, newDeck] = dealCard(currentDeck);
           currentHand = [...currentHand, card];
           currentDeck = newDeck;
@@ -147,7 +172,6 @@ const Casino = () => {
           dealerPlay();
         }, 500);
       } else {
-        // Determine winner
         const playerValue = calculateHandValue(playerHand);
         dealerValue = calculateHandValue(currentHand);
         
@@ -173,7 +197,6 @@ const Casino = () => {
     const newMoney = playerMoney + amount;
     setPlayerMoney(newMoney);
     
-    // Save to game state
     const saved = loadGame();
     if (saved) {
       saved.player.money = newMoney;
@@ -183,18 +206,23 @@ const Casino = () => {
     switch (resultType) {
       case 'blackjack':
         setResult('BLACKJACK! 🎉');
+        soundManager.playMinigameWin();
         break;
       case 'win':
         setResult('Du gewinnst! 💰');
+        soundManager.playMinigameWin();
         break;
       case 'lose':
         setResult('Dealer gewinnt 😔');
+        soundManager.playMinigameLose();
         break;
       case 'bust':
         setResult('Überkauft! 💥');
+        soundManager.playMinigameLose();
         break;
       case 'push':
         setResult('Unentschieden');
+        soundManager.playClick();
         break;
     }
   };
@@ -214,46 +242,46 @@ const Casino = () => {
         initial={{ opacity: 0, y: -50, rotateY: 180 }}
         animate={{ opacity: 1, y: 0, rotateY: 0 }}
         transition={{ delay: index * 0.1 }}
-        className={`playing-card ${isRed ? 'red' : 'black'} w-16 h-24 flex flex-col items-center justify-center ${
-          !card.faceUp ? 'bg-primary text-primary-foreground' : ''
+        className={`playing-card ${isRed ? 'red' : 'black'} w-20 h-32 md:w-24 md:h-36 flex flex-col items-center justify-center rounded-lg shadow-lg ${
+          !card.faceUp ? 'bg-primary text-primary-foreground' : 'bg-white'
         }`}
       >
         {card.faceUp ? (
           <>
-            <span className="text-lg font-bold">{card.rank}</span>
-            <span className="text-2xl">{suitSymbol}</span>
+            <span className={`text-2xl md:text-3xl font-bold ${isRed ? 'text-red-600' : 'text-gray-900'}`}>{card.rank}</span>
+            <span className={`text-4xl md:text-5xl ${isRed ? 'text-red-600' : 'text-gray-900'}`}>{suitSymbol}</span>
           </>
         ) : (
-          <span className="text-2xl">🎴</span>
+          <span className="text-4xl">🎴</span>
         )}
       </motion.div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-background p-4 md:p-8">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 md:mb-12">
           <Link to="/">
             <Button variant="ghost" className="text-muted-foreground">
               <ArrowLeft className="mr-2 h-4 w-4" /> Zurück
             </Button>
           </Link>
-          <h1 className="font-display text-3xl text-primary text-glow">Casino</h1>
+          <h1 className="font-display text-4xl md:text-5xl text-primary text-glow">Casino</h1>
           <div className="text-right">
-            <span className="text-2xl font-bold text-primary">
+            <span className="text-2xl md:text-3xl font-bold text-primary">
               {formatMoney(playerMoney)}
             </span>
           </div>
         </div>
 
-        {/* Game Area */}
-        <div className="bg-card rounded-xl p-8 card-glow">
+        {/* Game Area - Larger */}
+        <div className="bg-card rounded-2xl p-6 md:p-12 card-glow min-h-[500px] md:min-h-[600px]">
           {/* Dealer's Hand */}
-          <div className="mb-8">
-            <p className="text-muted-foreground mb-2">Dealer {gamePhase !== 'betting' && `(${calculateHandValue(dealerHand)})`}</p>
-            <div className="flex gap-2 min-h-24">
+          <div className="mb-8 md:mb-12">
+            <p className="text-muted-foreground mb-3 text-lg">Dealer {gamePhase !== 'betting' && `(${calculateHandValue(dealerHand)})`}</p>
+            <div className="flex gap-3 md:gap-4 min-h-32 md:min-h-36">
               {dealerHand.map((card, i) => renderCard(card, i))}
             </div>
           </div>
@@ -263,13 +291,13 @@ const Casino = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-center my-8"
+              className="text-center my-8 md:my-12"
             >
-              <p className={`text-3xl font-display ${winAmount > 0 ? 'text-success' : winAmount < 0 ? 'text-destructive' : 'text-primary'}`}>
+              <p className={`text-4xl md:text-5xl font-display ${winAmount > 0 ? 'text-success' : winAmount < 0 ? 'text-destructive' : 'text-primary'}`}>
                 {result}
               </p>
               {winAmount !== 0 && (
-                <p className={`text-xl ${winAmount > 0 ? 'text-success' : 'text-destructive'}`}>
+                <p className={`text-2xl md:text-3xl mt-2 ${winAmount > 0 ? 'text-success' : 'text-destructive'}`}>
                   {winAmount > 0 ? '+' : ''}{formatMoney(winAmount)}
                 </p>
               )}
@@ -277,62 +305,64 @@ const Casino = () => {
           )}
 
           {/* Player's Hand */}
-          <div className="mb-8">
-            <p className="text-muted-foreground mb-2">Du {gamePhase !== 'betting' && `(${calculateHandValue(playerHand)})`}</p>
-            <div className="flex gap-2 min-h-24">
+          <div className="mb-8 md:mb-12">
+            <p className="text-muted-foreground mb-3 text-lg">Du {gamePhase !== 'betting' && `(${calculateHandValue(playerHand)})`}</p>
+            <div className="flex gap-3 md:gap-4 min-h-32 md:min-h-36">
               {playerHand.map((card, i) => renderCard(card, i))}
             </div>
           </div>
 
           {/* Controls */}
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-6">
             {gamePhase === 'betting' && (
               <>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                   <Button
                     variant="outline"
-                    size="icon"
+                    size="lg"
                     onClick={() => setBet(Math.max(10, bet - 10))}
                     disabled={bet <= 10}
+                    className="h-14 w-14 rounded-full"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-6 w-6" />
                   </Button>
-                  <span className="text-2xl font-display text-primary w-24 text-center">
+                  <span className="text-4xl md:text-5xl font-display text-primary w-32 text-center">
                     €{bet}
                   </span>
                   <Button
                     variant="outline"
-                    size="icon"
+                    size="lg"
                     onClick={() => setBet(Math.min(playerMoney, bet + 10))}
                     disabled={bet >= playerMoney}
+                    className="h-14 w-14 rounded-full"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-6 w-6" />
                   </Button>
                 </div>
                 <Button
                   onClick={startGame}
                   disabled={bet > playerMoney || playerMoney <= 0}
-                  className="game-btn bg-primary text-primary-foreground px-8 py-4"
+                  className="game-btn bg-primary text-primary-foreground px-12 py-6 text-xl"
                 >
                   Spielen
                 </Button>
                 {playerMoney <= 0 && (
-                  <p className="text-destructive">Kein Geld mehr! Spiele im Hauptspiel, um Geld zu verdienen.</p>
+                  <p className="text-destructive text-lg">Kein Geld mehr! Spiele im Hauptspiel, um Geld zu verdienen.</p>
                 )}
               </>
             )}
 
             {gamePhase === 'playing' && (
-              <div className="flex gap-4">
+              <div className="flex gap-6">
                 <Button
                   onClick={hit}
-                  className="game-btn bg-success text-success-foreground px-8 py-4"
+                  className="game-btn bg-success text-success-foreground px-10 py-6 text-xl"
                 >
                   Hit
                 </Button>
                 <Button
                   onClick={stand}
-                  className="game-btn bg-warning text-warning-foreground px-8 py-4"
+                  className="game-btn bg-warning text-warning-foreground px-10 py-6 text-xl"
                 >
                   Stand
                 </Button>
@@ -340,13 +370,13 @@ const Casino = () => {
             )}
 
             {gamePhase === 'dealerTurn' && (
-              <p className="text-muted-foreground animate-pulse">Dealer zieht...</p>
+              <p className="text-muted-foreground animate-pulse text-xl">Dealer zieht...</p>
             )}
 
             {gamePhase === 'finished' && (
               <Button
                 onClick={() => setGamePhase('betting')}
-                className="game-btn bg-primary text-primary-foreground px-8 py-4"
+                className="game-btn bg-primary text-primary-foreground px-12 py-6 text-xl"
               >
                 Nochmal spielen
               </Button>
@@ -355,8 +385,8 @@ const Casino = () => {
         </div>
 
         {/* Rules */}
-        <div className="mt-8 text-center text-muted-foreground text-sm">
-          <p>Blackjack zahlt 3:2 | Dealer zieht bis 17 | Versicherung nicht verfügbar</p>
+        <div className="mt-8 text-center text-muted-foreground">
+          <p className="text-lg">Blackjack zahlt 3:2 | Dealer zieht bis 17</p>
         </div>
       </div>
     </div>
