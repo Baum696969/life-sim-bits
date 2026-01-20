@@ -7,23 +7,24 @@ interface FlappyBirdProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
 }
 
-// Dynamic difficulty - starts easy, gets harder
-const BASE_GRAVITY = 0.25;
-const BASE_JUMP_FORCE = -5;
-const BASE_PIPE_SPEED = 2;
-const PIPE_GAP = 180;
+// Much slower and easier initial settings
+const BASE_GRAVITY = 0.15; // Very low gravity - falls slowly
+const BASE_JUMP_FORCE = -4; // Gentle jump
+const BASE_PIPE_SPEED = 1.5; // Slow pipe movement
+const PIPE_GAP = 200; // Wide gap
 const PIPE_WIDTH = 60;
 const BIRD_SIZE = 30;
 const MAX_LIVES = 3;
+const MAX_FALL_SPEED = 4; // Limit fall speed
 
-// Difficulty scaling
+// Difficulty scaling - very gradual
 const getDynamicValues = (score: number) => {
-  const tier = Math.min(Math.floor(score / 5), 5);
+  const tier = Math.min(Math.floor(score / 7), 4); // Slower scaling
   
   return {
-    gravity: BASE_GRAVITY + (tier * 0.05),
-    jumpForce: BASE_JUMP_FORCE - (tier * 0.5),
-    pipeSpeed: BASE_PIPE_SPEED + (tier * 0.4),
+    gravity: BASE_GRAVITY + (tier * 0.02),
+    jumpForce: BASE_JUMP_FORCE - (tier * 0.3),
+    pipeSpeed: BASE_PIPE_SPEED + (tier * 0.25),
   };
 };
 
@@ -39,6 +40,7 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
   const frameRef = useRef<number>();
   const scoreRef = useRef(0);
   const livesRef = useRef(MAX_LIVES);
+  const gameStartedRef = useRef(false);
 
   // Responsive canvas size
   useEffect(() => {
@@ -51,11 +53,46 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
+  // Draw idle state when ready
+  useEffect(() => {
+    if (gameState === 'ready') {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const { width, height } = canvasSize;
+      
+      // Draw background
+      ctx.fillStyle = '#0a0a0f';
+      ctx.fillRect(0, 0, width, height);
+      
+      // Draw bird floating in center
+      const birdX = 50;
+      const birdY = height / 2;
+      
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(birdX + BIRD_SIZE / 2, birdY + BIRD_SIZE / 2, BIRD_SIZE / 2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(birdX + BIRD_SIZE / 2 + 5, birdY + BIRD_SIZE / 2 - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }, [gameState, canvasSize]);
+
   const jump = useCallback(() => {
     if (gameState === 'ready') {
-      // First jump starts the game
+      // First jump starts the game - bird doesn't fall until first jump
+      gameStartedRef.current = true;
+      birdRef.current = { y: canvasSize.height / 2, velocity: 0 };
+      pipesRef.current = [];
       setGameState('playing');
       soundManager.playMinigameStart();
+      
+      // Apply first jump
       const { jumpForce } = getDynamicValues(0);
       birdRef.current.velocity = jumpForce;
       soundManager.playClick();
@@ -64,11 +101,11 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
       birdRef.current.velocity = jumpForce;
       soundManager.playClick();
     }
-  }, [gameState]);
+  }, [gameState, canvasSize.height]);
 
-  const resetPosition = () => {
+  const resetPosition = useCallback(() => {
     birdRef.current = { y: canvasSize.height / 2, velocity: 0 };
-  };
+  }, [canvasSize.height]);
 
   const handleHit = useCallback(() => {
     soundManager.playHit();
@@ -112,7 +149,7 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
         setGameState('playing');
       }, 1000);
     }
-  }, [onComplete, canvasSize.height]);
+  }, [onComplete, resetPosition]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -127,11 +164,14 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
 
       const { gravity, pipeSpeed } = getDynamicValues(scoreRef.current);
 
+      // Apply gravity but limit fall speed
       birdRef.current.velocity += gravity;
+      birdRef.current.velocity = Math.min(birdRef.current.velocity, MAX_FALL_SPEED);
       birdRef.current.y += birdRef.current.velocity;
 
-      if (pipesRef.current.length === 0 || pipesRef.current[pipesRef.current.length - 1].x < width - 200) {
-        const topHeight = Math.random() * (height - PIPE_GAP - 100) + 50;
+      // Spawn pipes with more space between them
+      if (pipesRef.current.length === 0 || pipesRef.current[pipesRef.current.length - 1].x < width - 250) {
+        const topHeight = Math.random() * (height - PIPE_GAP - 120) + 60;
         pipesRef.current.push({ x: width, topHeight, passed: false });
       }
 
@@ -167,7 +207,7 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
         }
       }
 
-      // Draw
+      // Draw background
       ctx.fillStyle = '#0a0a0f';
       ctx.fillRect(0, 0, width, height);
 
@@ -228,6 +268,7 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
     pipesRef.current = [];
     scoreRef.current = 0;
     livesRef.current = MAX_LIVES;
+    gameStartedRef.current = false;
     setScore(0);
     setLives(MAX_LIVES);
     setGameState('ready');
@@ -263,13 +304,13 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
         {gameState === 'ready' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 rounded-lg">
             <p className="text-muted-foreground mb-2 text-sm md:text-base text-center px-4">
-              Tippe oder drücke Space zum Starten!
+              Tippe zum Starten und Springen!
             </p>
             <p className="text-xs text-muted-foreground mb-4">
               Du hast {MAX_LIVES} Leben
             </p>
             <Button onClick={jump} className="game-btn bg-primary">
-              <Play className="mr-2 h-4 w-4" /> Tippe zum Springen
+              <Play className="mr-2 h-4 w-4" /> Los geht's!
             </Button>
           </div>
         )}
