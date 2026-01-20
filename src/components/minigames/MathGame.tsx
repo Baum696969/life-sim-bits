@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Play, Check, X } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { Play, Check, X, Clock } from 'lucide-react';
 import { soundManager } from '@/lib/soundManager';
 
 interface MathGameProps {
@@ -15,6 +14,8 @@ interface MathQuestion {
   options: number[];
 }
 
+const TIME_PER_QUESTION = 12; // 12 seconds per question
+
 const MathGame = ({ onComplete }: MathGameProps) => {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'result' | 'gameover'>('ready');
   const [question, setQuestion] = useState<MathQuestion | null>(null);
@@ -23,6 +24,7 @@ const MathGame = ({ onComplete }: MathGameProps) => {
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [difficulty, setDifficulty] = useState(1);
+  const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
 
   const generateQuestion = (diff: number): MathQuestion => {
     const operations = ['+', '-', '*'];

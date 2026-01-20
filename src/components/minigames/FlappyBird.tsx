@@ -7,12 +7,25 @@ interface FlappyBirdProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
 }
 
-const GRAVITY = 0.5;
-const JUMP_FORCE = -8;
-const PIPE_SPEED = 3;
-const PIPE_GAP = 150;
+// Dynamic difficulty - starts easy, gets harder
+const BASE_GRAVITY = 0.25; // Much lower initial gravity
+const BASE_JUMP_FORCE = -5; // Softer jump
+const BASE_PIPE_SPEED = 2; // Slower initial speed
+const PIPE_GAP = 180; // Wider gap for easier start
 const PIPE_WIDTH = 60;
 const BIRD_SIZE = 30;
+
+// Difficulty scaling
+const getDynamicValues = (score: number) => {
+  // Every 5 points, increase difficulty
+  const tier = Math.min(Math.floor(score / 5), 5); // Max 5 tiers
+  
+  return {
+    gravity: BASE_GRAVITY + (tier * 0.05), // 0.25 -> 0.5 max
+    jumpForce: BASE_JUMP_FORCE - (tier * 0.5), // -5 -> -7.5 max
+    pipeSpeed: BASE_PIPE_SPEED + (tier * 0.4), // 2 -> 4 max
+  };
+};
 
 const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,7 +64,8 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
 
   const jump = useCallback(() => {
     if (gameState === 'playing') {
-      birdRef.current.velocity = JUMP_FORCE;
+      const { jumpForce } = getDynamicValues(scoreRef.current);
+      birdRef.current.velocity = jumpForce;
       soundManager.playClick();
     }
   }, [gameState]);
@@ -104,7 +118,10 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
     const gameLoop = () => {
       if (gameState !== 'playing') return;
 
-      birdRef.current.velocity += GRAVITY;
+      // Get dynamic difficulty based on current score
+      const { gravity, jumpForce, pipeSpeed } = getDynamicValues(scoreRef.current);
+
+      birdRef.current.velocity += gravity;
       birdRef.current.y += birdRef.current.velocity;
 
       if (pipesRef.current.length === 0 || pipesRef.current[pipesRef.current.length - 1].x < width - 200) {
@@ -114,7 +131,7 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
 
       pipesRef.current = pipesRef.current.filter(pipe => pipe.x > -PIPE_WIDTH);
       pipesRef.current.forEach(pipe => {
-        pipe.x -= PIPE_SPEED;
+        pipe.x -= pipeSpeed;
         
         if (!pipe.passed && pipe.x + PIPE_WIDTH < 50) {
           pipe.passed = true;
