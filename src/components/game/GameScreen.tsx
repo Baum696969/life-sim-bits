@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GameState, GameEvent, EventOption } from '@/types/game';
-import { seedEvents, getEventsForAge, selectRandomEvent } from '@/data/seedEvents';
+import { getEventsForAge, selectRandomEvent } from '@/data/seedEvents';
+import { seedEventsToDatabase } from '@/lib/seedDatabase';
 import { agePlayer, applyEffects, createTimelineEvent, saveGame, formatMoney } from '@/lib/gameUtils';
 import { soundManager } from '@/lib/soundManager';
 import StatsPanel from './StatsPanel';
@@ -22,7 +23,7 @@ interface GameScreenProps {
 const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const navigate = useNavigate();
   const [gameState, setGameState] = useState<GameState>(initialState);
-  const [allEvents, setAllEvents] = useState<GameEvent[]>(seedEvents);
+  const [allEvents, setAllEvents] = useState<GameEvent[]>([]);
   const [selectedOption, setSelectedOption] = useState<EventOption | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [showMinigame, setShowMinigame] = useState(false);
@@ -39,9 +40,13 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     };
   }, []);
 
-  // Load events from database
+  // Seed and load events from database
   useEffect(() => {
-    const loadEvents = async () => {
+    const initEvents = async () => {
+      // First seed events if needed
+      await seedEventsToDatabase();
+      
+      // Then load all active events from DB
       const { data, error } = await supabase
         .from('events')
         .select('*')
@@ -59,10 +64,10 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
           tags: e.tags || [],
           options: e.options || [],
         }));
-        setAllEvents([...seedEvents, ...dbEvents]);
+        setAllEvents(dbEvents);
       }
     };
-    loadEvents();
+    initEvents();
   }, []);
 
   // Select initial event
