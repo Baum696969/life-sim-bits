@@ -1,0 +1,749 @@
+import { GameEvent, EventOption, EventCategory } from '@/types/game';
+
+// Seed events for GitLife - 60+ events across all age groups
+
+const createId = () => Math.random().toString(36).substring(2, 15);
+
+// Helper to create event options
+const opt = (
+  label: string,
+  effects: { moneyDelta?: number; iqDelta?: number; healthDelta?: number; fitnessDelta?: number; looksDelta?: number; luckDelta?: number },
+  resultText: string,
+  minigame?: 'flappy' | 'snake' | 'memory' | 'puzzle' | 'blackjack' | 'math'
+): EventOption => ({
+  id: createId(),
+  label,
+  effects,
+  resultText,
+  minigame,
+});
+
+export const seedEvents: GameEvent[] = [
+  // === BABY (0-5) ===
+  {
+    id: createId(),
+    title: 'Erste Schritte',
+    text: 'Du hast gerade deine ersten Schritte gemacht! Deine Eltern sind überglücklich.',
+    minAge: 1,
+    maxAge: 2,
+    category: 'random',
+    weight: 1.5,
+    tags: ['milestone', 'baby'],
+    options: [
+      opt('Weiterlaufen', { fitnessDelta: 5, healthDelta: 2 }, 'Du wirst immer sicherer auf den Beinen!'),
+      opt('Hinfallen', { healthDelta: -2, fitnessDelta: 2 }, 'Autsch! Aber so lernt man.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Sprechen lernen',
+    text: 'Du versuchst, deine ersten Wörter zu sagen.',
+    minAge: 1,
+    maxAge: 3,
+    category: 'education',
+    weight: 1.2,
+    tags: ['milestone', 'baby'],
+    options: [
+      opt('Mama sagen', { iqDelta: 3 }, 'Mama! Deine Mutter ist gerührt.'),
+      opt('Papa sagen', { iqDelta: 3 }, 'Papa! Dein Vater strahlt vor Freude.'),
+      opt('Nein sagen', { iqDelta: 2, luckDelta: 1 }, 'NEIN! Du zeigst schon früh Charakter.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Kindergarten',
+    text: 'Dein erster Tag im Kindergarten steht bevor.',
+    minAge: 3,
+    maxAge: 5,
+    category: 'social',
+    weight: 1.3,
+    tags: ['milestone', 'social'],
+    options: [
+      opt('Freunde finden', { luckDelta: 5, healthDelta: 2 }, 'Du hast neue Freunde gefunden!'),
+      opt('Weinen', { healthDelta: -2 }, 'Du vermisst deine Eltern...'),
+      opt('Spielen', { fitnessDelta: 3, iqDelta: 1 }, 'Du spielst den ganzen Tag und hast Spaß!'),
+    ],
+  },
+
+  // === SCHULE (6-12) ===
+  {
+    id: createId(),
+    title: 'Mathetest in der Schule',
+    text: 'Heute ist der große Mathetest! Wie gut bist du vorbereitet?',
+    minAge: 6,
+    maxAge: 12,
+    category: 'school',
+    weight: 2.0,
+    tags: ['school', 'math', 'test'],
+    options: [
+      opt('Test machen', { iqDelta: 0 }, 'Los geht\'s! Rechne richtig für Bonus-IQ.', 'math'),
+      opt('Abschreiben versuchen', { iqDelta: -5, luckDelta: -3 }, 'Du wirst erwischt und bekommst Ärger!'),
+      opt('Krank machen', { healthDelta: -5 }, 'Du bleibst zu Hause, aber der Test muss nachgeholt werden.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Sportfest',
+    text: 'Die Schule veranstaltet ein großes Sportfest!',
+    minAge: 6,
+    maxAge: 12,
+    category: 'school',
+    weight: 1.5,
+    tags: ['school', 'sport', 'fitness'],
+    options: [
+      opt('Flappy Bird Challenge', { fitnessDelta: 0, moneyDelta: 0 }, 'Zeig was du kannst!', 'flappy'),
+      opt('Beim Laufen mitmachen', { fitnessDelta: 5, healthDelta: 2 }, 'Du gibst alles und wirst besser!'),
+      opt('Zuschauen', { fitnessDelta: -2 }, 'Du sitzt auf der Bank und langweilst dich.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Schulfreund',
+    text: 'Ein neuer Schüler ist in deine Klasse gekommen.',
+    minAge: 6,
+    maxAge: 12,
+    category: 'social',
+    weight: 1.3,
+    tags: ['school', 'social'],
+    options: [
+      opt('Freundschaft anbieten', { luckDelta: 5, healthDelta: 2 }, 'Ihr werdet beste Freunde!'),
+      opt('Ignorieren', { luckDelta: -2 }, 'Du verpasst die Chance auf eine Freundschaft.'),
+      opt('Ärgern', { luckDelta: -5, looksDelta: -2 }, 'Andere Kinder finden das nicht cool.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Hausaufgaben',
+    text: 'Du hast heute viele Hausaufgaben auf.',
+    minAge: 6,
+    maxAge: 12,
+    category: 'school',
+    weight: 1.8,
+    tags: ['school', 'education'],
+    options: [
+      opt('Fleißig arbeiten', { iqDelta: 3 }, 'Du lernst viel und bekommst gute Noten!'),
+      opt('Puzzle lösen statt lernen', { iqDelta: 0 }, 'Lass uns ein Puzzle machen!', 'puzzle'),
+      opt('Vergessen', { iqDelta: -3 }, 'Der Lehrer ist nicht begeistert...'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Memory Spiel im Unterricht',
+    text: 'Euer Lehrer macht ein Gedächtnisspiel mit der Klasse.',
+    minAge: 6,
+    maxAge: 12,
+    category: 'school',
+    weight: 1.5,
+    tags: ['school', 'memory', 'game'],
+    options: [
+      opt('Memory spielen', { iqDelta: 0 }, 'Teste dein Gedächtnis!', 'memory'),
+      opt('Nicht mitmachen', { iqDelta: -2 }, 'Du verpasst den Spaß.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Taschengeld',
+    text: 'Deine Eltern bieten dir Taschengeld für gute Noten an.',
+    minAge: 7,
+    maxAge: 12,
+    category: 'financial',
+    weight: 1.2,
+    tags: ['money', 'school'],
+    options: [
+      opt('Fleißig lernen', { moneyDelta: 20, iqDelta: 2 }, 'Du bekommst €20 für deine guten Noten!'),
+      opt('Lieber spielen', { fitnessDelta: 2 }, 'Spaß ist dir wichtiger als Geld.'),
+    ],
+  },
+
+  // === TEEN (13-17) ===
+  {
+    id: createId(),
+    title: 'Erster Nebenjob',
+    text: 'Der Supermarkt um die Ecke sucht Aushilfen.',
+    minAge: 14,
+    maxAge: 17,
+    category: 'career',
+    weight: 1.5,
+    tags: ['job', 'money', 'teen'],
+    options: [
+      opt('Bewerben', { moneyDelta: 200, fitnessDelta: -2 }, 'Du bekommst den Job! €200 pro Monat.'),
+      opt('Snake spielen stattdessen', { moneyDelta: 0 }, 'Zock lieber ein bisschen!', 'snake'),
+      opt('Ablehnen', { fitnessDelta: 2 }, 'Du hast mehr Zeit für Sport.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Schulparty',
+    text: 'Die große Schulparty steht an! Alle werden da sein.',
+    minAge: 13,
+    maxAge: 17,
+    category: 'social',
+    weight: 1.8,
+    tags: ['party', 'social', 'teen'],
+    options: [
+      opt('Hingehen und feiern', { luckDelta: 5, looksDelta: 2 }, 'Du hast viel Spaß und lernst neue Leute kennen!'),
+      opt('Zuhause bleiben', { iqDelta: 2, luckDelta: -3 }, 'Du lernst stattdessen.'),
+      opt('Party crashen', { luckDelta: -5, looksDelta: -3 }, 'Das war keine gute Idee...'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Mathe-Abitur Vorbereitung',
+    text: 'Der Mathe-Test wird schwieriger. Zeit zum Lernen!',
+    minAge: 15,
+    maxAge: 17,
+    category: 'school',
+    weight: 2.0,
+    tags: ['school', 'math', 'exam'],
+    options: [
+      opt('Mathetest ablegen', { iqDelta: 0 }, 'Zeig was du gelernt hast!', 'math'),
+      opt('Mit Freunden lernen', { iqDelta: 3, luckDelta: 2 }, 'Gemeinsam lernt es sich besser!'),
+      opt('Nicht lernen', { iqDelta: -5 }, 'Du fällst durch den Test.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Erste Beziehung',
+    text: 'Jemand aus deiner Klasse interessiert sich für dich.',
+    minAge: 14,
+    maxAge: 17,
+    category: 'relationship',
+    weight: 1.4,
+    tags: ['relationship', 'teen'],
+    options: [
+      opt('Zusammenkommen', { luckDelta: 8, looksDelta: 2 }, 'Ihr seid jetzt zusammen! 💕'),
+      opt('Ablehnen', { luckDelta: -2 }, 'Du bist noch nicht bereit.'),
+      opt('Freunde bleiben', { luckDelta: 3 }, 'Ihr bleibt gute Freunde.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Führerschein',
+    text: 'Du bist alt genug für den Führerschein!',
+    minAge: 17,
+    maxAge: 17,
+    category: 'education',
+    weight: 1.5,
+    tags: ['milestone', 'driving'],
+    options: [
+      opt('Führerschein machen', { moneyDelta: -2000, iqDelta: 3 }, 'Du hast bestanden! Kosten: €2000'),
+      opt('Später machen', { moneyDelta: 0 }, 'Du wartest noch ein Jahr.'),
+    ],
+  },
+
+  // === JUNGER ERWACHSENER (18-25) ===
+  {
+    id: createId(),
+    title: 'Studium oder Ausbildung?',
+    text: 'Die Schule ist vorbei. Was nun?',
+    minAge: 18,
+    maxAge: 19,
+    category: 'education',
+    weight: 2.0,
+    tags: ['milestone', 'career', 'education'],
+    options: [
+      opt('Studium beginnen', { moneyDelta: -5000, iqDelta: 10 }, 'Du schreibst dich an der Uni ein. Kosten: €5000'),
+      opt('Ausbildung starten', { moneyDelta: 500, iqDelta: 5 }, 'Du beginnst eine Ausbildung mit Gehalt!'),
+      opt('Erstmal chillen', { fitnessDelta: 2, iqDelta: -3 }, 'Gap Year! Du entspannst dich.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Erste eigene Wohnung',
+    text: 'Du ziehst von zu Hause aus!',
+    minAge: 18,
+    maxAge: 25,
+    category: 'random',
+    weight: 1.5,
+    tags: ['milestone', 'living'],
+    options: [
+      opt('Eigene Wohnung', { moneyDelta: -800, luckDelta: 5 }, 'Freiheit! Miete: €800/Monat'),
+      opt('WG', { moneyDelta: -400, luckDelta: 3 }, 'Du teilst dir eine WG. Günstiger!'),
+      opt('Bei Eltern bleiben', { moneyDelta: 0, luckDelta: -3 }, 'Du sparst Geld, aber...'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Casino Einladung',
+    text: 'Deine Freunde wollen ins Casino. Du bist jetzt alt genug!',
+    minAge: 18,
+    maxAge: 25,
+    category: 'minigame',
+    weight: 1.3,
+    tags: ['casino', 'gambling'],
+    options: [
+      opt('Blackjack spielen', { moneyDelta: 0 }, 'Setz dein Geld ein!', 'blackjack'),
+      opt('Nur zuschauen', { luckDelta: -2 }, 'Du schaust nur zu.'),
+      opt('Ablehnen', { luckDelta: 1 }, 'Du bleibst vernünftig.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Praktikum Angebot',
+    text: 'Ein großes Unternehmen bietet dir ein Praktikum an.',
+    minAge: 20,
+    maxAge: 25,
+    category: 'career',
+    weight: 1.6,
+    tags: ['job', 'career'],
+    options: [
+      opt('Annehmen', { moneyDelta: 600, iqDelta: 5 }, 'Du sammelst wertvolle Erfahrung! €600/Monat'),
+      opt('Ablehnen', { luckDelta: -2 }, 'Du verpasst die Chance.'),
+    ],
+  },
+
+  // === ERWACHSENER (26-60) ===
+  {
+    id: createId(),
+    title: 'Beförderung',
+    text: 'Dein Chef bietet dir eine Beförderung an!',
+    minAge: 26,
+    maxAge: 50,
+    category: 'career',
+    weight: 1.5,
+    tags: ['job', 'career', 'money'],
+    options: [
+      opt('Annehmen', { moneyDelta: 2000, fitnessDelta: -2 }, 'Mehr Gehalt! +€2000/Monat, aber mehr Stress.'),
+      opt('Ablehnen', { luckDelta: -3 }, 'Du bleibst in deiner Position.'),
+      opt('Verhandeln', { moneyDelta: 3000, iqDelta: 2 }, 'Du verhandelst geschickt! +€3000/Monat'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Investment Möglichkeit',
+    text: 'Ein Freund hat einen heißen Aktientipp.',
+    minAge: 25,
+    maxAge: 60,
+    category: 'financial',
+    weight: 1.4,
+    tags: ['money', 'investment'],
+    options: [
+      opt('€1000 investieren', { moneyDelta: 0, luckDelta: 0 }, 'Risiko! 50% Chance auf Verdoppelung.'),
+      opt('Nicht investieren', { luckDelta: 1 }, 'Du bleibst vorsichtig.'),
+      opt('Alles investieren', { moneyDelta: 0, luckDelta: -5 }, 'Sehr riskant!'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Fitness Studio',
+    text: 'Du überlegst, ins Fitness Studio zu gehen.',
+    minAge: 20,
+    maxAge: 60,
+    category: 'health',
+    weight: 1.3,
+    tags: ['fitness', 'health'],
+    options: [
+      opt('Mitgliedschaft abschließen', { moneyDelta: -50, fitnessDelta: 8, healthDelta: 3 }, 'Du trainierst regelmäßig!'),
+      opt('Zuhause trainieren', { fitnessDelta: 4 }, 'Günstiger, aber weniger effektiv.'),
+      opt('Gar nicht trainieren', { fitnessDelta: -3, healthDelta: -2 }, 'Du wirst fauler.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Schönheits-OP',
+    text: 'Du überlegst, dein Aussehen zu verbessern.',
+    minAge: 25,
+    maxAge: 55,
+    category: 'health',
+    weight: 0.8,
+    tags: ['looks', 'health'],
+    options: [
+      opt('OP machen', { moneyDelta: -5000, looksDelta: 15, healthDelta: -5 }, 'Du siehst besser aus! Kosten: €5000'),
+      opt('Nur Hautpflege', { moneyDelta: -200, looksDelta: 5 }, 'Natürliche Verbesserung.'),
+      opt('Akzeptieren wie du bist', { luckDelta: 3 }, 'Selbstakzeptanz!'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Krankheit',
+    text: 'Du fühlst dich nicht gut...',
+    minAge: 30,
+    maxAge: 80,
+    category: 'health',
+    weight: 1.2,
+    tags: ['health', 'illness'],
+    options: [
+      opt('Zum Arzt gehen', { moneyDelta: -100, healthDelta: 10 }, 'Der Arzt hilft dir!'),
+      opt('Aussitzen', { healthDelta: -15 }, 'Es wird schlimmer...'),
+      opt('Alternative Medizin', { moneyDelta: -50, healthDelta: 5, luckDelta: -2 }, 'Teils wirksam.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Lotterie',
+    text: 'Du siehst einen Lottoschein im Laden.',
+    minAge: 18,
+    maxAge: 90,
+    category: 'random',
+    weight: 1.0,
+    tags: ['luck', 'gambling'],
+    options: [
+      opt('Einen Schein kaufen', { moneyDelta: -5, luckDelta: 0 }, 'Vielleicht gewinnst du? (1% Chance auf €10000)'),
+      opt('Nicht spielen', { luckDelta: 0 }, 'Du sparst €5.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Immobilien',
+    text: 'Du überlegst, ein Haus zu kaufen.',
+    minAge: 30,
+    maxAge: 55,
+    category: 'financial',
+    weight: 1.2,
+    tags: ['money', 'investment', 'living'],
+    options: [
+      opt('Haus kaufen', { moneyDelta: -50000, luckDelta: 10 }, 'Du bist Hausbesitzer! Kredit: €50000'),
+      opt('Weiter mieten', { luckDelta: -2 }, 'Du bleibst flexibel.'),
+    ],
+  },
+
+  // === SENIOR (61+) ===
+  {
+    id: createId(),
+    title: 'Rente',
+    text: 'Du gehst in Rente!',
+    minAge: 65,
+    maxAge: 67,
+    category: 'career',
+    weight: 2.0,
+    tags: ['milestone', 'retirement'],
+    options: [
+      opt('Rente genießen', { moneyDelta: 2000, fitnessDelta: -3 }, 'Endlich Ruhestand! €2000/Monat Rente.'),
+      opt('Nebenjob behalten', { moneyDelta: 3000, healthDelta: -5 }, 'Du arbeitest weiter.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Gesundheitscheck',
+    text: 'Zeit für den jährlichen Gesundheitscheck.',
+    minAge: 60,
+    maxAge: 100,
+    category: 'health',
+    weight: 1.5,
+    tags: ['health', 'senior'],
+    options: [
+      opt('Zum Check gehen', { moneyDelta: -100, healthDelta: 5 }, 'Alles in Ordnung!'),
+      opt('Überspringen', { healthDelta: -10 }, 'Du ignorierst mögliche Probleme.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Enkelkinder',
+    text: 'Deine Kinder haben Kinder bekommen!',
+    minAge: 55,
+    maxAge: 80,
+    category: 'random',
+    weight: 1.3,
+    tags: ['family', 'milestone'],
+    options: [
+      opt('Zeit mit ihnen verbringen', { luckDelta: 10, healthDelta: 3 }, 'Du bist ein glücklicher Großelternteil!'),
+      opt('Geschenke schicken', { moneyDelta: -200, luckDelta: 5 }, 'Die Kleinen freuen sich!'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Erbschaft',
+    text: 'Ein entfernter Verwandter ist verstorben und hat dir etwas hinterlassen.',
+    minAge: 40,
+    maxAge: 90,
+    category: 'financial',
+    weight: 0.7,
+    tags: ['money', 'luck'],
+    options: [
+      opt('Erbe annehmen', { moneyDelta: 15000, luckDelta: 5 }, 'Du erbst €15000!'),
+      opt('Spenden', { moneyDelta: 0, luckDelta: 10 }, 'Du spendest alles. Gutes Karma!'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Betrugsversuch',
+    text: 'Jemand ruft an und behauptet, du hast gewonnen...',
+    minAge: 50,
+    maxAge: 100,
+    category: 'random',
+    weight: 0.8,
+    tags: ['scam', 'money'],
+    options: [
+      opt('Auflegen', { luckDelta: 3 }, 'Gute Entscheidung! Es war ein Betrug.'),
+      opt('Glauben', { moneyDelta: -2000, luckDelta: -10 }, 'Du wirst um €2000 betrogen!'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Gedächtnistraining',
+    text: 'Du merkst, dass dein Gedächtnis nachlässt.',
+    minAge: 60,
+    maxAge: 100,
+    category: 'health',
+    weight: 1.2,
+    tags: ['health', 'memory', 'senior'],
+    options: [
+      opt('Memory spielen', { iqDelta: 0 }, 'Trainiere dein Gehirn!', 'memory'),
+      opt('Rätsel lösen', { iqDelta: 3 }, 'Regelmäßiges Training hilft!'),
+      opt('Nichts tun', { iqDelta: -5 }, 'Es wird schlimmer.'),
+    ],
+  },
+
+  // === ALLGEMEINE EVENTS ===
+  {
+    id: createId(),
+    title: 'Glückstag',
+    text: 'Heute ist dein Glückstag! Alles läuft super.',
+    minAge: 0,
+    maxAge: 100,
+    category: 'random',
+    weight: 0.5,
+    tags: ['luck', 'random'],
+    options: [
+      opt('Genießen', { luckDelta: 10, healthDelta: 5 }, 'Was für ein toller Tag!'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Unfall',
+    text: 'Du hattest einen kleinen Unfall.',
+    minAge: 5,
+    maxAge: 100,
+    category: 'health',
+    weight: 0.6,
+    tags: ['accident', 'health'],
+    options: [
+      opt('Zum Arzt', { moneyDelta: -200, healthDelta: -10 }, 'Nichts Schlimmes, aber es kostet.'),
+      opt('Aussitzen', { healthDelta: -20 }, 'Es heilt von selbst... langsam.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Gaming Session',
+    text: 'Lust auf ein Spiel?',
+    minAge: 8,
+    maxAge: 80,
+    category: 'minigame',
+    weight: 1.0,
+    tags: ['game', 'fun'],
+    options: [
+      opt('Flappy Bird', { moneyDelta: 0 }, 'Lass uns spielen!', 'flappy'),
+      opt('Snake', { moneyDelta: 0 }, 'Klassiker!', 'snake'),
+      opt('Memory', { iqDelta: 0 }, 'Trainiere dein Gehirn!', 'memory'),
+      opt('Puzzle', { iqDelta: 0 }, 'Kniffelig!', 'puzzle'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Diät',
+    text: 'Du überlegst, eine Diät zu machen.',
+    minAge: 15,
+    maxAge: 70,
+    category: 'health',
+    weight: 1.0,
+    tags: ['health', 'fitness'],
+    options: [
+      opt('Strenge Diät', { fitnessDelta: 5, looksDelta: 5, healthDelta: -2 }, 'Du nimmst ab, aber es ist anstrengend.'),
+      opt('Gesünder essen', { fitnessDelta: 2, healthDelta: 3 }, 'Langfristig besser!'),
+      opt('Weiter so', { fitnessDelta: -2 }, 'Keine Veränderung.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Urlaub',
+    text: 'Zeit für einen Urlaub!',
+    minAge: 18,
+    maxAge: 80,
+    category: 'random',
+    weight: 1.1,
+    tags: ['vacation', 'fun'],
+    options: [
+      opt('Luxusurlaub', { moneyDelta: -3000, healthDelta: 10, luckDelta: 5 }, 'Entspannung pur! Kosten: €3000'),
+      opt('Camping', { moneyDelta: -200, fitnessDelta: 5, luckDelta: 2 }, 'Günstig und gesund!'),
+      opt('Staycation', { moneyDelta: 0, healthDelta: 3 }, 'Zu Hause entspannen.'),
+    ],
+  },
+
+  // === MEHR MATHE EVENTS ===
+  {
+    id: createId(),
+    title: 'Kopfrechnen Challenge',
+    text: 'Dein Freund fordert dich zum Kopfrechnen heraus!',
+    minAge: 8,
+    maxAge: 50,
+    category: 'education',
+    weight: 1.0,
+    tags: ['math', 'challenge'],
+    options: [
+      opt('Annehmen', { iqDelta: 0 }, 'Los geht\'s!', 'math'),
+      opt('Ablehnen', { luckDelta: -2 }, 'Du kneiferst...'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Mathe-Olympiade',
+    text: 'Die Schule sucht Teilnehmer für die Mathe-Olympiade.',
+    minAge: 10,
+    maxAge: 18,
+    category: 'school',
+    weight: 0.8,
+    tags: ['math', 'competition'],
+    options: [
+      opt('Teilnehmen', { iqDelta: 0, moneyDelta: 0 }, 'Zeig was du kannst!', 'math'),
+      opt('Nicht interessiert', { luckDelta: -1 }, 'Du lässt es.'),
+    ],
+  },
+
+  // === MEHR MINIGAME EVENTS ===
+  {
+    id: createId(),
+    title: 'Arcade Halle',
+    text: 'Du findest eine alte Arcade Halle!',
+    minAge: 10,
+    maxAge: 60,
+    category: 'minigame',
+    weight: 1.0,
+    tags: ['game', 'arcade'],
+    options: [
+      opt('Flappy spielen', { moneyDelta: -5 }, 'Retro Gaming!', 'flappy'),
+      opt('Snake zocken', { moneyDelta: -5 }, 'Der Klassiker!', 'snake'),
+      opt('Weitergehen', { luckDelta: 0 }, 'Du gehst vorbei.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Puzzle Wettbewerb',
+    text: 'Es gibt einen Puzzle-Wettbewerb mit Preisgeld!',
+    minAge: 12,
+    maxAge: 70,
+    category: 'minigame',
+    weight: 0.9,
+    tags: ['puzzle', 'competition'],
+    options: [
+      opt('Teilnehmen', { iqDelta: 0 }, 'Puzzle Zeit!', 'puzzle'),
+      opt('Zuschauen', { luckDelta: 1 }, 'Du schaust nur.'),
+    ],
+  },
+
+  // === KARRIERE EVENTS ===
+  {
+    id: createId(),
+    title: 'Jobwechsel',
+    text: 'Ein Headhunter bietet dir einen neuen Job an.',
+    minAge: 25,
+    maxAge: 55,
+    category: 'career',
+    weight: 1.2,
+    tags: ['job', 'career'],
+    options: [
+      opt('Wechseln', { moneyDelta: 1500, luckDelta: 3 }, 'Neuer Job, mehr Gehalt! +€1500'),
+      opt('Bleiben', { luckDelta: 2 }, 'Du bleibst loyal.'),
+      opt('Verhandeln für mehr', { moneyDelta: 2500, iqDelta: 2 }, 'Du holst mehr raus! +€2500'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Eigenes Unternehmen',
+    text: 'Du träumst davon, dein eigenes Unternehmen zu gründen.',
+    minAge: 25,
+    maxAge: 50,
+    category: 'career',
+    weight: 0.8,
+    tags: ['business', 'career'],
+    options: [
+      opt('Gründen', { moneyDelta: -10000, luckDelta: 0 }, 'Riskant! Investition: €10000'),
+      opt('Weiter angestellt', { luckDelta: 1 }, 'Sicherheit ist dir wichtiger.'),
+    ],
+  },
+
+  // Mehr Events um auf 60+ zu kommen
+  {
+    id: createId(),
+    title: 'Haustier',
+    text: 'Du überlegst, dir ein Haustier anzuschaffen.',
+    minAge: 10,
+    maxAge: 70,
+    category: 'random',
+    weight: 1.0,
+    tags: ['pet', 'fun'],
+    options: [
+      opt('Hund adoptieren', { moneyDelta: -500, luckDelta: 8, fitnessDelta: 5 }, 'Du hast einen neuen Freund!'),
+      opt('Katze adoptieren', { moneyDelta: -300, luckDelta: 6 }, 'Schnurr!'),
+      opt('Kein Haustier', { luckDelta: 0 }, 'Vielleicht später.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Soziales Engagement',
+    text: 'Eine Hilfsorganisation sucht Freiwillige.',
+    minAge: 16,
+    maxAge: 80,
+    category: 'social',
+    weight: 0.9,
+    tags: ['volunteer', 'social'],
+    options: [
+      opt('Mitmachen', { luckDelta: 10, healthDelta: 2 }, 'Du hilfst anderen und fühlst dich gut!'),
+      opt('Spenden', { moneyDelta: -100, luckDelta: 5 }, 'Geld statt Zeit.'),
+      opt('Ablehnen', { luckDelta: -2 }, 'Du hast keine Zeit.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Musik lernen',
+    text: 'Du überlegst, ein Instrument zu lernen.',
+    minAge: 6,
+    maxAge: 60,
+    category: 'education',
+    weight: 1.0,
+    tags: ['music', 'hobby'],
+    options: [
+      opt('Gitarre lernen', { moneyDelta: -300, iqDelta: 5, looksDelta: 3 }, 'Du lernst Gitarre spielen!'),
+      opt('Klavier lernen', { moneyDelta: -500, iqDelta: 7 }, 'Klassisch und elegant!'),
+      opt('Kein Interesse', { luckDelta: 0 }, 'Musik ist nichts für dich.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Sport Team',
+    text: 'Ein lokales Sportteam sucht Mitspieler.',
+    minAge: 10,
+    maxAge: 50,
+    category: 'health',
+    weight: 1.1,
+    tags: ['sport', 'fitness', 'social'],
+    options: [
+      opt('Beitreten', { fitnessDelta: 10, luckDelta: 5, healthDelta: 3 }, 'Du wirst fit und findest Freunde!'),
+      opt('Ablehnen', { luckDelta: -1 }, 'Sport ist nicht dein Ding.'),
+    ],
+  },
+  {
+    id: createId(),
+    title: 'Kochkurs',
+    text: 'Es gibt einen lokalen Kochkurs.',
+    minAge: 16,
+    maxAge: 70,
+    category: 'education',
+    weight: 0.9,
+    tags: ['cooking', 'hobby'],
+    options: [
+      opt('Teilnehmen', { moneyDelta: -100, healthDelta: 5, iqDelta: 2 }, 'Du lernst gesund zu kochen!'),
+      opt('Selber lernen', { healthDelta: 2, iqDelta: 1 }, 'YouTube Tutorials!'),
+    ],
+  },
+];
+
+export const getEventsForAge = (events: GameEvent[], age: number): GameEvent[] => {
+  return events.filter(event => age >= event.minAge && age <= event.maxAge);
+};
+
+export const selectRandomEvent = (events: GameEvent[]): GameEvent | null => {
+  if (events.length === 0) return null;
+  
+  // Weighted random selection
+  const totalWeight = events.reduce((sum, event) => sum + event.weight, 0);
+  let random = Math.random() * totalWeight;
+  
+  for (const event of events) {
+    random -= event.weight;
+    if (random <= 0) {
+      return event;
+    }
+  }
+  
+  return events[events.length - 1];
+};
