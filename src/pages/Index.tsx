@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { hasSavedGame, loadGame, createNewPlayer, createNewGameState, clearSave } from '@/lib/gameUtils';
 import GameScreen from '@/components/game/GameScreen';
 import { GameState } from '@/types/game';
-
-const Index = () => {
+import { Link } from 'react-router-dom';
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showGame, setShowGame] = useState(false);
   const [hasSave, setHasSave] = useState(false);
@@ -148,19 +147,22 @@ const Index = () => {
               )}
 
               <div className="flex gap-3 mt-4">
-                <Button
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-primary"
-                  onClick={() => window.location.href = '/casino'}
-                >
-                  <DollarSign className="mr-2 h-5 w-5" /> Casino
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-primary"
-                >
-                  <Settings className="mr-2 h-5 w-5" /> Einstellungen
-                </Button>
+                <Link to="/casino">
+                  <Button
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    <DollarSign className="mr-2 h-5 w-5" /> Casino
+                  </Button>
+                </Link>
+                <Link to="/settings">
+                  <Button
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    <Settings className="mr-2 h-5 w-5" /> Einstellungen
+                  </Button>
+                </Link>
               </div>
             </motion.div>
           )}
