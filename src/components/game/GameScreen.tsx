@@ -70,12 +70,12 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     initEvents();
   }, []);
 
-  // Select initial event
+  // Select initial event when events are loaded
   useEffect(() => {
-    if (!gameState.currentEvent && !gameState.gameOver) {
+    if (allEvents.length > 0 && !gameState.currentEvent && !gameState.gameOver) {
       selectNextEvent();
     }
-  }, []);
+  }, [allEvents]);
 
   // Auto-save
   useEffect(() => {
@@ -83,8 +83,11 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   }, [gameState]);
 
   const selectNextEvent = () => {
+    if (allEvents.length === 0) return; // Don't select if no events loaded
+    
     const eligibleEvents = getEventsForAge(allEvents, gameState.player.age);
     const event = selectRandomEvent(eligibleEvents);
+    soundManager.playEventAppear();
     setGameState(prev => ({ ...prev, currentEvent: event }));
     setSelectedOption(null);
     setShowResult(false);
@@ -284,6 +287,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onComplete={handleMinigameComplete}
         onClose={() => setShowMinigame(false)}
         playerMoney={gameState.player.money}
+        playerAge={gameState.player.age}
       />
     </div>
   );

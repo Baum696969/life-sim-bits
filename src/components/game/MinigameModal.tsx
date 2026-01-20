@@ -34,6 +34,7 @@ const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney, pla
         return <MathGame onComplete={onComplete} />;
       case 'sequence':
         return <SequenceGame onComplete={onComplete} playerAge={playerAge} />;
+      case 'shooter':
       case 'spaceshooter':
         return <SpaceShooter onComplete={onComplete} />;
       case 'bottles':
