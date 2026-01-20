@@ -1,9 +1,17 @@
-import { Player } from '@/types/game';
+import { Player, CriminalRecord } from '@/types/game';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getCrimes, attemptCrime, CrimeResult, CrimeInfo } from '@/lib/crimeSystem';
+import { crimeOptions, CrimeOption, attemptCrime } from '@/lib/crimeSystem';
 import { AlertTriangle, DollarSign, Percent, Clock, Skull } from 'lucide-react';
+
+export interface CrimeResult {
+  success: boolean;
+  reward: number;
+  prisonYears: number;
+  record: CriminalRecord;
+  crime: CrimeOption;
+}
 
 interface CrimeModalProps {
   isOpen: boolean;
@@ -13,15 +21,15 @@ interface CrimeModalProps {
 }
 
 const CrimeModal = ({ isOpen, onClose, player, onCrimeResult }: CrimeModalProps) => {
-  const crimes = getCrimes();
+  const crimes = crimeOptions;
 
-  const handleCommitCrime = (crimeId: string) => {
-    const result = attemptCrime(crimeId, player);
-    onCrimeResult(result);
+  const handleCommitCrime = (crime: CrimeOption) => {
+    const result = attemptCrime(crime, player);
+    onCrimeResult({ ...result, crime });
   };
 
-  const getSuccessChanceForPlayer = (crime: CrimeInfo): number => {
-    let chance = crime.baseSuccess;
+  const getSuccessChanceForPlayer = (crime: CrimeOption): number => {
+    let chance = crime.baseSuccessRate * 100;
     
     // IQ bonus
     chance += (player.stats.iq - 50) * 0.2;
@@ -83,8 +91,7 @@ const CrimeModal = ({ isOpen, onClose, player, onCrimeResult }: CrimeModalProps)
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <h3 className="font-display text-lg flex items-center gap-2">
-                      <span>{crime.icon}</span>
+                    <h3 className="font-display text-lg">
                       {crime.name}
                     </h3>
                     <p className="text-sm text-muted-foreground">{crime.description}</p>
@@ -103,14 +110,14 @@ const CrimeModal = ({ isOpen, onClose, player, onCrimeResult }: CrimeModalProps)
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3 text-muted-foreground" />
                         <span className="text-muted-foreground">
-                          {crime.minPrison}-{crime.maxPrison} Jahre Gefängnis
+                          {crime.basePrisonYears}-{crime.maxPrisonYears} Jahre Gefängnis
                         </span>
                       </div>
                     </div>
                   </div>
 
                   <Button
-                    onClick={() => handleCommitCrime(crime.id)}
+                    onClick={() => handleCommitCrime(crime)}
                     variant="destructive"
                     size="sm"
                     className="bg-destructive/80 hover:bg-destructive"

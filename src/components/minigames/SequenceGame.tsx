@@ -6,6 +6,7 @@ import { soundManager } from '@/lib/soundManager';
 
 interface SequenceGameProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
+  playerAge?: number;
 }
 
 const SYMBOLS = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠'];
