@@ -15,12 +15,53 @@ export interface Player {
   age: number;
   money: number;
   stats: PlayerStats;
-  job: string | null;
-  education: string | null;
+  job: Job | null;
+  education: EducationLevel;
   relationship: string | null;
   isAlive: boolean;
   createdAt: number;
+  // New fields for extended gameplay
+  inSchool: boolean;
+  schoolYearsCompleted: number;
+  hasNewspaperJob: boolean;
+  criminalRecord: CriminalRecord[];
+  inPrison: boolean;
+  prisonYearsRemaining: number;
+  extraSchoolYears: number; // Optional +2 years after age 16
 }
+
+export interface Job {
+  id: string;
+  title: string;
+  salary: number;
+  requiredIQ: number;
+  requiredEducation: EducationLevel;
+}
+
+export type EducationLevel = 
+  | 'none'
+  | 'kindergarten'
+  | 'elementary'      // Grundschule (6-10)
+  | 'middleschool'    // Mittelstufe (11-13)
+  | 'highschool'      // Oberstufe (14-16)
+  | 'extended'        // Extra 2 Jahre (17-18)
+  | 'apprenticeship'  // Ausbildung
+  | 'university';     // Studium
+
+export interface CriminalRecord {
+  id: string;
+  crimeType: CrimeType;
+  year: number;
+  caught: boolean;
+  prisonYears: number;
+}
+
+export type CrimeType = 
+  | 'pickpocket'      // Taschendiebstahl
+  | 'bankrobbery'     // Bankraub
+  | 'packagetheft'    // Paketdiebstahl
+  | 'fraud'           // Betrug
+  | 'cartheft';       // Autodiebstahl
 
 export interface GameState {
   player: Player;
@@ -79,7 +120,9 @@ export type EventCategory =
   | 'minigame'
   | 'financial'
   | 'education'
-  | 'relationship';
+  | 'relationship'
+  | 'crime'
+  | 'prison';
 
 export type MinigameType =
   | 'flappy'
@@ -87,7 +130,9 @@ export type MinigameType =
   | 'memory'
   | 'puzzle'
   | 'blackjack'
-  | 'math';
+  | 'math'
+  | 'sequence'     // Merkspiel
+  | 'spaceshooter'; // Weltraum-Shooter
 
 export interface MinigameResult {
   type: MinigameType;
@@ -135,4 +180,40 @@ export interface BlackjackState {
   bet: number;
   gamePhase: 'betting' | 'playing' | 'dealerTurn' | 'finished';
   result: 'win' | 'lose' | 'push' | 'blackjack' | null;
+}
+
+// Life History / Death Archive
+export interface LifeRecord {
+  id: string;
+  playerName: string;
+  birthYear: number;
+  deathYear: number;
+  ageAtDeath: number;
+  maxMoney: number;
+  finalMoney: number;
+  causeOfDeath: string;
+  topEvents: { title: string; age: number }[];
+  finalStats: PlayerStats;
+  education: EducationLevel;
+  job: string | null;
+  createdAt: number;
+}
+
+// Highscore System
+export interface HighscoreEntry {
+  id: string;
+  minigame: MinigameType;
+  score: number;
+  playerName: string;
+  lifeId: string;
+  date: number;
+}
+
+// Admin Logging
+export interface AdminLog {
+  id: string;
+  action: 'create' | 'update' | 'delete';
+  eventId: string;
+  eventTitle: string;
+  timestamp: number;
 }

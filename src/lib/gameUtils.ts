@@ -1,4 +1,4 @@
-import { Player, PlayerStats, GameState, TimelineEvent, EventEffects, AgeGroup } from '@/types/game';
+import { Player, PlayerStats, GameState, TimelineEvent, EventEffects, AgeGroup, EducationLevel } from '@/types/game';
 
 const generateId = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -22,10 +22,18 @@ export const createNewPlayer = (name: string): Player => {
       luck: 30 + Math.floor(Math.random() * 40),
     },
     job: null,
-    education: 'Kindergarten',
+    education: 'kindergarten',
     relationship: null,
     isAlive: true,
     createdAt: Date.now(),
+    // New fields
+    inSchool: false,
+    schoolYearsCompleted: 0,
+    hasNewspaperJob: false,
+    criminalRecord: [],
+    inPrison: false,
+    prisonYearsRemaining: 0,
+    extraSchoolYears: 0,
   };
 };
 
@@ -83,6 +91,25 @@ export const applyEffects = (player: Player, effects: EventEffects): Player => {
   };
 };
 
+export const updateEducation = (player: Player): Player => {
+  let newEducation: EducationLevel = player.education;
+  
+  // Automatic school progression
+  if (player.age === 6) {
+    newEducation = 'elementary';
+  } else if (player.age === 10) {
+    newEducation = 'middleschool';
+  } else if (player.age === 13) {
+    newEducation = 'highschool';
+  }
+  
+  return {
+    ...player,
+    education: newEducation,
+    inSchool: player.age >= 6 && player.age <= 16 + player.extraSchoolYears,
+  };
+};
+
 export const agePlayer = (player: Player): Player => {
   // Passive stat changes based on age and lifestyle
   const passiveEffects: EventEffects = {};
@@ -107,11 +134,44 @@ export const agePlayer = (player: Player): Player => {
     }
   }
 
+  // Prison effects
+  if (player.inPrison && player.prisonYearsRemaining > 0) {
+    passiveEffects.healthDelta = (passiveEffects.healthDelta || 0) - 5;
+    passiveEffects.luckDelta = -2;
+  }
+
   const agedPlayer = applyEffects(player, passiveEffects);
   
+  // Update education
+  const educatedPlayer = updateEducation(agedPlayer);
+  
+  // Add newspaper job income
+  let income = 0;
+  if (educatedPlayer.hasNewspaperJob && educatedPlayer.age >= 13) {
+    income += 50; // Yearly newspaper income
+  }
+  
+  // Add job income
+  if (educatedPlayer.job && !educatedPlayer.inPrison) {
+    income += educatedPlayer.job.salary;
+  }
+  
+  // Handle prison time
+  let prisonRemaining = educatedPlayer.prisonYearsRemaining;
+  let stillInPrison = educatedPlayer.inPrison;
+  if (stillInPrison && prisonRemaining > 0) {
+    prisonRemaining--;
+    if (prisonRemaining <= 0) {
+      stillInPrison = false;
+    }
+  }
+  
   return {
-    ...agedPlayer,
+    ...educatedPlayer,
     age: player.age + 1,
+    money: educatedPlayer.money + income,
+    inPrison: stillInPrison,
+    prisonYearsRemaining: prisonRemaining,
   };
 };
 
