@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GameState, GameEvent, EventOption, TimelineEvent } from '@/types/game';
+import { GameState, GameEvent, EventOption } from '@/types/game';
 import { seedEvents, getEventsForAge, selectRandomEvent } from '@/data/seedEvents';
-import { agePlayer, applyEffects, createTimelineEvent, saveGame, formatMoney, formatEffects } from '@/lib/gameUtils';
+import { agePlayer, applyEffects, createTimelineEvent, saveGame, formatMoney } from '@/lib/gameUtils';
+import { soundManager } from '@/lib/soundManager';
 import StatsPanel from './StatsPanel';
 import EventPanel from './EventPanel';
 import TimelinePanel from './TimelinePanel';
 import MinigameModal from './MinigameModal';
 import GameOverScreen from './GameOverScreen';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Home } from 'lucide-react';
+import { ChevronRight, Home, Volume2, VolumeX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface GameScreenProps {
@@ -24,6 +25,17 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const [showResult, setShowResult] = useState(false);
   const [showMinigame, setShowMinigame] = useState(false);
   const [currentMinigame, setCurrentMinigame] = useState<string | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
+
+  // Start ambient music on mount
+  useEffect(() => {
+    if (soundEnabled) {
+      soundManager.startBackgroundMusic();
+    }
+    return () => {
+      soundManager.stopBackgroundMusic();
+    };
+  }, []);
 
   // Load events from database
   useEffect(() => {
@@ -72,9 +84,11 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   };
 
   const handleOptionSelect = (option: EventOption) => {
+    soundManager.playClick();
     setSelectedOption(option);
 
     if (option.minigame) {
+      soundManager.playMinigameStart();
       setCurrentMinigame(option.minigame);
       setShowMinigame(true);
     } else {
@@ -85,6 +99,19 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const applyOptionEffects = (option: EventOption, bonusEffects?: any) => {
     const effects = { ...option.effects, ...bonusEffects };
     const newPlayer = applyEffects(gameState.player, effects);
+
+    // Play appropriate sound based on effects
+    const totalDelta = (effects.moneyDelta || 0) + (effects.iqDelta || 0) + 
+      (effects.healthDelta || 0) + (effects.fitnessDelta || 0) + (effects.looksDelta || 0);
+    
+    if (totalDelta > 0) {
+      soundManager.playPositiveEffect();
+      if (effects.moneyDelta && effects.moneyDelta > 0) {
+        soundManager.playCoins();
+      }
+    } else if (totalDelta < 0) {
+      soundManager.playNegativeEffect();
+    }
 
     const timelineEvent = createTimelineEvent(
       gameState.year,
@@ -101,6 +128,10 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       gameOver: !newPlayer.isAlive,
     }));
 
+    if (!newPlayer.isAlive) {
+      soundManager.playGameOver();
+    }
+
     setShowResult(true);
   };
 
@@ -116,6 +147,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   };
 
   const advanceYear = () => {
+    soundManager.playNewYear();
     const agedPlayer = agePlayer(gameState.player);
     
     setGameState(prev => ({
@@ -127,6 +159,19 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
 
     if (agedPlayer.isAlive) {
       selectNextEvent();
+    } else {
+      soundManager.playGameOver();
+    }
+  };
+
+  const toggleSound = () => {
+    const newEnabled = !soundEnabled;
+    setSoundEnabled(newEnabled);
+    soundManager.setEnabled(newEnabled);
+    if (newEnabled) {
+      soundManager.startBackgroundMusic();
+    } else {
+      soundManager.stopBackgroundMusic();
     }
   };
 
@@ -135,35 +180,40 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-2 md:p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" onClick={onExit} className="text-muted-foreground">
-            <Home className="mr-2 h-4 w-4" /> Menü
-          </Button>
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={onExit} className="text-muted-foreground h-8 w-8 md:h-10 md:w-10">
+              <Home className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={toggleSound} className="text-muted-foreground h-8 w-8 md:h-10 md:w-10">
+              {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </Button>
+          </div>
           <div className="text-center">
-            <h2 className="font-display text-2xl text-primary">{gameState.player.name}</h2>
-            <p className="text-muted-foreground">
+            <h2 className="font-display text-lg md:text-2xl text-primary">{gameState.player.name}</h2>
+            <p className="text-xs md:text-sm text-muted-foreground">
               Alter: {gameState.player.age} | Jahr: {gameState.year}
             </p>
           </div>
           <div className="text-right">
-            <span className="text-2xl font-bold text-primary">
+            <span className="text-lg md:text-2xl font-bold text-primary">
               {formatMoney(gameState.player.money)}
             </span>
           </div>
         </div>
 
-        {/* Main Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Stats */}
-          <div className="lg:col-span-3">
+        {/* Main Layout - Mobile optimized */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+          {/* Stats - Collapsible on mobile */}
+          <div className="lg:col-span-3 order-2 lg:order-1">
             <StatsPanel stats={gameState.player.stats} />
           </div>
 
-          {/* Event */}
-          <div className="lg:col-span-6">
+          {/* Event - Primary focus */}
+          <div className="lg:col-span-6 order-1 lg:order-2">
             <AnimatePresence mode="wait">
               {gameState.currentEvent && (
                 <motion.div
@@ -190,7 +240,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
               >
                 <Button
                   onClick={advanceYear}
-                  className="game-btn bg-primary text-primary-foreground px-8 py-4 text-lg"
+                  className="game-btn bg-primary text-primary-foreground px-6 md:px-8 py-3 md:py-4 text-base md:text-lg w-full md:w-auto"
                 >
                   Nächstes Jahr <ChevronRight className="ml-2" />
                 </Button>
@@ -198,8 +248,8 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
             )}
           </div>
 
-          {/* Timeline */}
-          <div className="lg:col-span-3">
+          {/* Timeline - Hidden on mobile, shown as overlay */}
+          <div className="lg:col-span-3 order-3 hidden lg:block">
             <TimelinePanel timeline={gameState.timeline} />
           </div>
         </div>

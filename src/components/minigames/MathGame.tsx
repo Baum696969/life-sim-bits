@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Play, Check, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
+import { soundManager } from '@/lib/soundManager';
 
 interface MathGameProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
@@ -50,7 +52,6 @@ const MathGame = ({ onComplete }: MathGameProps) => {
         answer = 2;
     }
 
-    // Generate wrong answers
     const wrongAnswers = new Set<number>();
     while (wrongAnswers.size < 3) {
       const offset = Math.floor(Math.random() * 10) - 5;
@@ -87,7 +88,10 @@ const MathGame = ({ onComplete }: MathGameProps) => {
     setGameState('result');
     
     if (correct) {
+      soundManager.playMatch();
       setCorrectAnswers(c => c + 1);
+    } else {
+      soundManager.playNegativeEffect();
     }
   };
 
@@ -96,11 +100,16 @@ const MathGame = ({ onComplete }: MathGameProps) => {
     setQuestionsAnswered(newCount);
     
     if (newCount >= 5) {
-      // Game over after 5 questions
       setGameState('gameover');
       
       const score = correctAnswers + (isCorrect ? 1 : 0);
       const iqGain = score * 3 - (5 - score) * 2;
+      
+      if (score >= 3) {
+        soundManager.playMinigameWin();
+      } else {
+        soundManager.playMinigameLose();
+      }
       
       setTimeout(() => {
         onComplete({
@@ -112,7 +121,6 @@ const MathGame = ({ onComplete }: MathGameProps) => {
         });
       }, 1500);
     } else {
-      // Next question with potentially higher difficulty
       if (correctAnswers >= 2) {
         setDifficulty(d => Math.min(d + 1, 3));
       }
@@ -124,12 +132,12 @@ const MathGame = ({ onComplete }: MathGameProps) => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <h2 className="font-display text-2xl text-primary">Mathetest</h2>
+    <div className="flex flex-col items-center gap-4 md:gap-6 p-2">
+      <h2 className="font-display text-xl md:text-2xl text-primary">Mathetest</h2>
       
       {gameState === 'ready' ? (
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Beantworte 5 Mathe-Fragen!</p>
+          <p className="text-muted-foreground mb-4 text-sm md:text-base">Beantworte 5 Mathe-Fragen!</p>
           <Button onClick={startGame} className="game-btn bg-primary">
             <Play className="mr-2 h-4 w-4" /> Start
           </Button>
@@ -140,16 +148,16 @@ const MathGame = ({ onComplete }: MathGameProps) => {
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <p className="text-3xl font-display text-primary mb-2">
+          <p className="text-2xl md:text-3xl font-display text-primary mb-2">
             {correctAnswers + (isCorrect ? 1 : 0)}/5 richtig!
           </p>
-          <p className={`text-xl ${(correctAnswers + (isCorrect ? 1 : 0)) >= 3 ? 'text-success' : 'text-destructive'}`}>
+          <p className={`text-lg md:text-xl ${(correctAnswers + (isCorrect ? 1 : 0)) >= 3 ? 'text-success' : 'text-destructive'}`}>
             {(correctAnswers + (isCorrect ? 1 : 0)) >= 3 ? 'Bestanden!' : 'Durchgefallen...'}
           </p>
         </motion.div>
       ) : (
         <>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs md:text-sm text-muted-foreground">
             Frage {questionsAnswered + 1}/5 | Richtig: {correctAnswers}
           </div>
           
@@ -159,36 +167,36 @@ const MathGame = ({ onComplete }: MathGameProps) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="text-center"
+              className="text-center w-full"
             >
-              <p className="text-4xl font-display text-primary mb-8">
+              <p className="text-3xl md:text-4xl font-display text-primary mb-6 md:mb-8">
                 {question?.question}
               </p>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2 md:gap-4 max-w-md mx-auto">
                 {question?.options.map((option, index) => (
                   <motion.button
                     key={index}
                     onClick={() => handleAnswer(option)}
                     disabled={gameState === 'result'}
-                    className={`p-6 text-2xl font-display rounded-lg border-2 transition-all ${
+                    className={`p-4 md:p-6 text-xl md:text-2xl font-display rounded-lg border-2 transition-all ${
                       gameState === 'result'
                         ? option === question.correctAnswer
                           ? 'bg-success/20 border-success text-success'
                           : option === selectedAnswer
                             ? 'bg-destructive/20 border-destructive text-destructive'
                             : 'bg-muted border-muted-foreground/20'
-                        : 'bg-card border-primary/30 hover:border-primary hover:bg-primary/10'
+                        : 'bg-card border-primary/30 hover:border-primary hover:bg-primary/10 active:scale-95'
                     }`}
                     whileHover={gameState === 'playing' ? { scale: 1.05 } : {}}
                     whileTap={gameState === 'playing' ? { scale: 0.95 } : {}}
                   >
                     {option}
                     {gameState === 'result' && option === question.correctAnswer && (
-                      <Check className="inline-block ml-2 h-6 w-6" />
+                      <Check className="inline-block ml-2 h-5 w-5 md:h-6 md:w-6" />
                     )}
                     {gameState === 'result' && option === selectedAnswer && option !== question.correctAnswer && (
-                      <X className="inline-block ml-2 h-6 w-6" />
+                      <X className="inline-block ml-2 h-5 w-5 md:h-6 md:w-6" />
                     )}
                   </motion.button>
                 ))}
@@ -202,7 +210,7 @@ const MathGame = ({ onComplete }: MathGameProps) => {
               animate={{ opacity: 1 }}
               className="text-center"
             >
-              <p className={`text-xl mb-4 ${isCorrect ? 'text-success' : 'text-destructive'}`}>
+              <p className={`text-lg md:text-xl mb-4 ${isCorrect ? 'text-success' : 'text-destructive'}`}>
                 {isCorrect ? 'Richtig! 🎉' : 'Falsch! 😔'}
               </p>
               <Button onClick={nextQuestion} className="game-btn bg-primary">
