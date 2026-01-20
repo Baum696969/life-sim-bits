@@ -10,8 +10,9 @@ import TimelinePanel from './TimelinePanel';
 import MinigameModal from './MinigameModal';
 import GameOverScreen from './GameOverScreen';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Home, Volume2, VolumeX } from 'lucide-react';
+import { ChevronRight, Home, Volume2, VolumeX, Coins } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface GameScreenProps {
   initialState: GameState;
@@ -19,6 +20,7 @@ interface GameScreenProps {
 }
 
 const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
+  const navigate = useNavigate();
   const [gameState, setGameState] = useState<GameState>(initialState);
   const [allEvents, setAllEvents] = useState<GameEvent[]>(seedEvents);
   const [selectedOption, setSelectedOption] = useState<EventOption | null>(null);
@@ -100,6 +102,9 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     const effects = { ...option.effects, ...bonusEffects };
     const newPlayer = applyEffects(gameState.player, effects);
 
+    // Check if health dropped to 0 or below
+    const isDead = newPlayer.stats.health <= 0 || !newPlayer.isAlive;
+
     // Play appropriate sound based on effects
     const totalDelta = (effects.moneyDelta || 0) + (effects.iqDelta || 0) + 
       (effects.healthDelta || 0) + (effects.fitnessDelta || 0) + (effects.looksDelta || 0);
@@ -123,12 +128,12 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
 
     setGameState(prev => ({
       ...prev,
-      player: newPlayer,
+      player: { ...newPlayer, isAlive: !isDead },
       timeline: [timelineEvent, ...prev.timeline].slice(0, 50),
-      gameOver: !newPlayer.isAlive,
+      gameOver: isDead,
     }));
 
-    if (!newPlayer.isAlive) {
+    if (isDead) {
       soundManager.playGameOver();
     }
 
@@ -150,18 +155,27 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     soundManager.playNewYear();
     const agedPlayer = agePlayer(gameState.player);
     
+    // Check if health is 0 or below
+    const isDead = agedPlayer.stats.health <= 0 || !agedPlayer.isAlive;
+    
     setGameState(prev => ({
       ...prev,
-      player: agedPlayer,
+      player: { ...agedPlayer, isAlive: !isDead },
       year: prev.year + 1,
-      gameOver: !agedPlayer.isAlive,
+      gameOver: isDead,
     }));
 
-    if (agedPlayer.isAlive) {
+    if (!isDead) {
       selectNextEvent();
     } else {
       soundManager.playGameOver();
     }
+  };
+
+  const goToCasino = () => {
+    // Save current game state before navigating
+    saveGame(gameState);
+    navigate('/casino');
   };
 
   const toggleSound = () => {
@@ -190,6 +204,9 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
             </Button>
             <Button variant="ghost" size="icon" onClick={toggleSound} className="text-muted-foreground h-8 w-8 md:h-10 md:w-10">
               {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={goToCasino} className="text-muted-foreground h-8 w-8 md:h-10 md:w-10" title="Casino">
+              <Coins className="h-4 w-4" />
             </Button>
           </div>
           <div className="text-center">
