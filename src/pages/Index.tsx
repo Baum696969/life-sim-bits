@@ -4,6 +4,7 @@ import { Play, RotateCcw, Settings, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { hasSavedGame, loadGame, createNewPlayer, createNewGameState, clearSave } from '@/lib/gameUtils';
 import GameScreen from '@/components/game/GameScreen';
+import ChangelogModal from '@/components/game/ChangelogModal';
 import { GameState } from '@/types/game';
 import { Link } from 'react-router-dom';
 
@@ -157,6 +158,7 @@ const Index = () => {
                     <DollarSign className="mr-2 h-5 w-5" /> Casino
                   </Button>
                 </Link>
+                <ChangelogModal />
                 <Link to="/settings">
                   <Button
                     variant="ghost"
