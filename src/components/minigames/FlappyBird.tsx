@@ -16,8 +16,9 @@ const BIRD_SIZE = 30;
 
 const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [gameState, setGameState] = useState<'ready' | 'playing' | 'gameover'>('ready');
+  const [gameState, setGameState] = useState<'ready' | 'countdown' | 'playing' | 'gameover'>('ready');
   const [score, setScore] = useState(0);
+  const [countdown, setCountdown] = useState(3);
   const [canvasSize, setCanvasSize] = useState({ width: 400, height: 400 });
   
   const birdRef = useRef({ y: 200, velocity: 0 });
@@ -36,6 +37,18 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
+  // Countdown timer
+  useEffect(() => {
+    if (gameState === 'countdown') {
+      if (countdown > 0) {
+        const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+        return () => clearTimeout(timer);
+      } else {
+        setGameState('playing');
+      }
+    }
+  }, [gameState, countdown]);
+
   const jump = useCallback(() => {
     if (gameState === 'playing') {
       birdRef.current.velocity = JUMP_FORCE;
@@ -48,7 +61,8 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
     pipesRef.current = [];
     scoreRef.current = 0;
     setScore(0);
-    setGameState('playing');
+    setCountdown(3);
+    setGameState('countdown');
   };
 
   const endGame = useCallback(() => {
@@ -208,6 +222,15 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
             <Button onClick={startGame} className="game-btn bg-primary">
               <Play className="mr-2 h-4 w-4" /> Start
             </Button>
+          </div>
+        )}
+
+        {gameState === 'countdown' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 rounded-lg">
+            <p className="text-6xl md:text-8xl font-display text-primary animate-pulse">
+              {countdown === 0 ? 'LOS!' : countdown}
+            </p>
+            <p className="text-muted-foreground mt-4">Mach dich bereit!</p>
           </div>
         )}
         
