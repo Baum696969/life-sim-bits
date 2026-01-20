@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, RotateCcw, Settings, Gamepad2, DollarSign } from 'lucide-react';
+import { Play, RotateCcw, Settings, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { hasSavedGame, loadGame, createNewPlayer, createNewGameState, clearSave } from '@/lib/gameUtils';
 import GameScreen from '@/components/game/GameScreen';
 import { GameState } from '@/types/game';
 import { Link } from 'react-router-dom';
+
+const Index = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showGame, setShowGame] = useState(false);
   const [hasSave, setHasSave] = useState(false);
