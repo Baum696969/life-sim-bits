@@ -1,19 +1,24 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GameState, GameEvent, EventOption } from '@/types/game';
+import { GameState, GameEvent, EventOption, Job } from '@/types/game';
 import { getEventsForAge, selectRandomEvent } from '@/data/seedEvents';
 import { seedEventsToDatabase } from '@/lib/seedDatabase';
 import { agePlayer, applyEffects, createTimelineEvent, saveGame, formatMoney } from '@/lib/gameUtils';
 import { soundManager } from '@/lib/soundManager';
+import { getAllJobs } from '@/lib/jobSystem';
 import StatsPanel from './StatsPanel';
 import EventPanel from './EventPanel';
 import TimelinePanel from './TimelinePanel';
 import MinigameModal from './MinigameModal';
 import GameOverScreen from './GameOverScreen';
+import StatusBar from './StatusBar';
+import JobModal from './JobModal';
+import CrimeModal, { CrimeResult } from './CrimeModal';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Home, Volume2, VolumeX, Coins } from 'lucide-react';
+import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface GameScreenProps {
   initialState: GameState;
@@ -29,6 +34,11 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const [showMinigame, setShowMinigame] = useState(false);
   const [currentMinigame, setCurrentMinigame] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
+  
+  // Job and Crime modals
+  const [showJobModal, setShowJobModal] = useState(false);
+  const [showCrimeModal, setShowCrimeModal] = useState(false);
+  const [hasBabysitterJob, setHasBabysitterJob] = useState(false);
 
   // Start ambient music on mount
   useEffect(() => {
@@ -161,7 +171,12 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
 
   const advanceYear = () => {
     soundManager.playNewYear();
-    const agedPlayer = agePlayer(gameState.player);
+    let agedPlayer = agePlayer(gameState.player);
+    
+    // Add side job income
+    if (hasBabysitterJob) {
+      agedPlayer = { ...agedPlayer, money: agedPlayer.money + 80 };
+    }
     
     // Check if health is 0 or below
     const isDead = agedPlayer.stats.health <= 0 || !agedPlayer.isAlive;
@@ -179,6 +194,96 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       soundManager.playGameOver();
     }
   };
+
+  // Job handlers
+  const handleApplyForJob = (jobId: string) => {
+    const allJobs = getAllJobs();
+    const job = allJobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    // Random chance based on stats
+    const successChance = 0.5 + (gameState.player.stats.iq - 50) * 0.005 + (gameState.player.stats.looks - 50) * 0.003;
+    const success = Math.random() < successChance;
+
+    if (success) {
+      soundManager.playJobPromotion();
+      const newJob: Job = {
+        id: job.id,
+        title: job.title,
+        salary: job.salary,
+        requiredIQ: job.requirements.minIQ || 0,
+        requiredEducation: job.requirements.minEducation || 'none',
+      };
+      setGameState(prev => ({
+        ...prev,
+        player: { ...prev.player, job: newJob },
+      }));
+      toast.success(`Glückwunsch! Du wurdest als ${job.title} eingestellt!`);
+    } else {
+      soundManager.playNegativeEffect();
+      toast.error(`Leider wurde deine Bewerbung als ${job.title} abgelehnt.`);
+    }
+    setShowJobModal(false);
+  };
+
+  const handleQuitJob = () => {
+    if (gameState.player.job) {
+      soundManager.playClick();
+      toast.info(`Du hast deinen Job als ${gameState.player.job.title} gekündigt.`);
+      setGameState(prev => ({
+        ...prev,
+        player: { ...prev.player, job: undefined },
+      }));
+    }
+    setShowJobModal(false);
+  };
+
+  const handleToggleNewspaperJob = () => {
+    soundManager.playClick();
+    setGameState(prev => ({
+      ...prev,
+      player: { ...prev.player, hasNewspaperJob: !prev.player.hasNewspaperJob },
+    }));
+  };
+
+  const handleToggleBabysitterJob = () => {
+    soundManager.playClick();
+    setHasBabysitterJob(prev => !prev);
+  };
+
+  // Crime handler
+  const handleCrimeResult = (result: CrimeResult) => {
+    setShowCrimeModal(false);
+    
+    if (result.success) {
+      soundManager.playCrimeSuccess();
+      toast.success(`${result.crime.name} erfolgreich! Du hast €${result.reward.toLocaleString()} erbeutet!`);
+      setGameState(prev => ({
+        ...prev,
+        player: {
+          ...prev.player,
+          money: prev.player.money + result.reward,
+          criminalRecord: [...prev.player.criminalRecord, result.record],
+        },
+      }));
+    } else {
+      soundManager.playCrimeFail();
+      toast.error(`Du wurdest erwischt! ${result.prisonYears} Jahre Gefängnis!`);
+      setGameState(prev => ({
+        ...prev,
+        player: {
+          ...prev.player,
+          inPrison: true,
+          prisonYearsRemaining: result.prisonYears,
+          job: undefined, // Lose job when going to prison
+          criminalRecord: [...prev.player.criminalRecord, result.record],
+        },
+      }));
+    }
+  };
+
+  // Check if player can access crime (18+)
+  const canAccessCrime = gameState.player.age >= 18 && !gameState.player.inPrison;
 
   const goToCasino = () => {
     // Save current game state before navigating
@@ -202,7 +307,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-2 md:p-4">
+    <div className="min-h-screen bg-background p-2 md:p-4 pb-20">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 md:mb-6">
@@ -216,6 +321,30 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
             <Button variant="ghost" size="icon" onClick={goToCasino} className="text-muted-foreground h-8 w-8 md:h-10 md:w-10" title="Casino">
               <Coins className="h-4 w-4" />
             </Button>
+            {/* Job Button - only show after school */}
+            {gameState.player.age > 16 + gameState.player.extraSchoolYears && !gameState.player.inPrison && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setShowJobModal(true)} 
+                className="text-muted-foreground h-8 w-8 md:h-10 md:w-10"
+                title="Jobsuche"
+              >
+                <Briefcase className="h-4 w-4" />
+              </Button>
+            )}
+            {/* Crime Button - 18+ only */}
+            {canAccessCrime && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setShowCrimeModal(true)} 
+                className="text-destructive h-8 w-8 md:h-10 md:w-10"
+                title="Kriminalität"
+              >
+                <Skull className="h-4 w-4" />
+              </Button>
+            )}
           </div>
           <div className="text-center">
             <h2 className="font-display text-lg md:text-2xl text-primary">{gameState.player.name}</h2>
@@ -280,6 +409,14 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         </div>
       </div>
 
+      {/* StatusBar at bottom */}
+      <StatusBar
+        player={gameState.player}
+        onToggleNewspaperJob={handleToggleNewspaperJob}
+        onToggleBabysitterJob={handleToggleBabysitterJob}
+        hasBabysitterJob={hasBabysitterJob}
+      />
+
       {/* Minigame Modal */}
       <MinigameModal
         isOpen={showMinigame}
@@ -288,6 +425,23 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onClose={() => setShowMinigame(false)}
         playerMoney={gameState.player.money}
         playerAge={gameState.player.age}
+      />
+
+      {/* Job Modal */}
+      <JobModal
+        isOpen={showJobModal}
+        onClose={() => setShowJobModal(false)}
+        player={gameState.player}
+        onApply={handleApplyForJob}
+        onQuit={handleQuitJob}
+      />
+
+      {/* Crime Modal */}
+      <CrimeModal
+        isOpen={showCrimeModal}
+        onClose={() => setShowCrimeModal(false)}
+        player={gameState.player}
+        onCrimeResult={handleCrimeResult}
       />
     </div>
   );
