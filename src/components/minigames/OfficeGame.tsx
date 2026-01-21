@@ -243,18 +243,19 @@ const OfficeGame = ({ onComplete }: OfficeGameProps) => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                   onClick={() => selectTask(task)}
+                  onTouchStart={() => selectTask(task)}
                   className={`
-                    flex items-center justify-between p-3 rounded-lg text-left transition-all
+                    flex items-center justify-between p-3 rounded-lg text-left transition-all touch-manipulation
                     ${selectedTask?.id === task.id 
                       ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted/50 hover:bg-muted'
+                      : 'bg-muted/50 hover:bg-muted active:bg-muted'
                     }
                   `}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{task.emoji}</span>
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <span className="text-xl md:text-2xl">{task.emoji}</span>
                     <div>
-                      <p className="font-medium">{task.name}</p>
+                      <p className="font-medium text-sm md:text-base">{task.name}</p>
                       <p className="text-xs opacity-70">
                         Schritt {task.currentStep + 1}/{task.steps.length}
                       </p>
@@ -262,7 +263,7 @@ const OfficeGame = ({ onComplete }: OfficeGameProps) => {
                   </div>
                   <Progress 
                     value={(task.currentStep / task.steps.length) * 100} 
-                    className="w-16 h-2" 
+                    className="w-12 md:w-16 h-2" 
                   />
                 </motion.button>
               ))}
@@ -289,7 +290,8 @@ const OfficeGame = ({ onComplete }: OfficeGameProps) => {
                   key={action}
                   variant="outline"
                   onClick={() => performAction(action)}
-                  className="h-12"
+                  onTouchStart={(e) => { e.preventDefault(); performAction(action); }}
+                  className="h-12 md:h-14 touch-manipulation active:scale-95 text-sm md:text-base"
                 >
                   {action}
                 </Button>

@@ -175,7 +175,12 @@ const TimeSense = ({ onComplete, playerAge = 25 }: TimeSenseProps) => {
                 <p>🔥 Perfekt-Streak: Bonus-Multiplikator</p>
               </div>
             </div>
-            <Button onClick={startRound} size="lg" className="gap-2">
+            <Button 
+              onClick={startRound} 
+              onTouchStart={(e) => { e.preventDefault(); startRound(); }}
+              size="lg" 
+              className="gap-2 touch-manipulation"
+            >
               <Play className="h-5 w-5" /> Spiel starten
             </Button>
           </motion.div>
@@ -226,9 +231,10 @@ const TimeSense = ({ onComplete, playerAge = 25 }: TimeSenseProps) => {
 
             <Button 
               onClick={handleStop} 
+              onTouchStart={(e) => { e.preventDefault(); handleStop(); }}
               size="lg" 
               variant="destructive"
-              className="text-xl px-12 py-6"
+              className="text-xl px-12 py-8 touch-manipulation active:scale-95 transition-transform"
             >
               <Target className="h-6 w-6 mr-2" /> STOPP!
             </Button>

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
+import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface StealthGameProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
@@ -34,6 +35,7 @@ const StealthGame = ({ onComplete }: StealthGameProps) => {
   const [detected, setDetected] = useState(false);
   const [won, setWon] = useState(false);
   const gameRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   const initGame = useCallback(() => {
     // Place guards
@@ -285,6 +287,8 @@ const StealthGame = ({ onComplete }: StealthGameProps) => {
 
   // Collect all vision cells
   const allVisionCells = guards.flatMap(g => getVisionCells(g));
+  
+  const cellSize = isMobile ? 'text-sm' : 'text-lg';
 
   return (
     <Card className="w-full max-w-lg mx-auto" ref={gameRef}>
@@ -294,12 +298,12 @@ const StealthGame = ({ onComplete }: StealthGameProps) => {
           <span>Züge: {moves}</span>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <div 
-          className="grid gap-1 mx-auto"
+          className="grid gap-0.5 md:gap-1 mx-auto touch-none"
           style={{ 
             gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
-            maxWidth: '320px'
+            maxWidth: isMobile ? '280px' : '320px'
           }}
         >
           {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, i) => {
@@ -316,7 +320,7 @@ const StealthGame = ({ onComplete }: StealthGameProps) => {
               <motion.div
                 key={i}
                 className={`
-                  aspect-square rounded flex items-center justify-center text-lg
+                  aspect-square rounded flex items-center justify-center ${cellSize}
                   ${isVision && !isPlayer ? 'bg-red-500/30' : 'bg-muted/50'}
                   ${isExit && !isPlayer ? 'bg-green-500/30 border border-green-500' : ''}
                   ${isPlayer ? 'bg-primary' : ''}
@@ -328,12 +332,14 @@ const StealthGame = ({ onComplete }: StealthGameProps) => {
                 {isGuard && (
                   <span className="relative">
                     👮
-                    <span className="absolute -top-1 -right-1 text-xs">
-                      {guard?.direction === 'up' && '⬆️'}
-                      {guard?.direction === 'down' && '⬇️'}
-                      {guard?.direction === 'left' && '⬅️'}
-                      {guard?.direction === 'right' && '➡️'}
-                    </span>
+                    {!isMobile && (
+                      <span className="absolute -top-1 -right-1 text-xs">
+                        {guard?.direction === 'up' && '⬆️'}
+                        {guard?.direction === 'down' && '⬇️'}
+                        {guard?.direction === 'left' && '⬅️'}
+                        {guard?.direction === 'right' && '➡️'}
+                      </span>
+                    )}
                   </span>
                 )}
                 {isLoot && !isPlayer && '💎'}
@@ -342,9 +348,55 @@ const StealthGame = ({ onComplete }: StealthGameProps) => {
             );
           })}
         </div>
-        <p className="text-xs text-center text-muted-foreground mt-4">
-          Pfeiltasten oder WASD zum Bewegen
-        </p>
+        
+        {/* Mobile D-Pad Controls */}
+        {isMobile && gameState === 'playing' && (
+          <div className="grid grid-cols-3 gap-1 w-36 mx-auto">
+            <div />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-12 w-12 touch-manipulation"
+              onTouchStart={() => movePlayer(0, -1)}
+            >
+              <ArrowUp className="h-6 w-6" />
+            </Button>
+            <div />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-12 w-12 touch-manipulation"
+              onTouchStart={() => movePlayer(-1, 0)}
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+            <div />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-12 w-12 touch-manipulation"
+              onTouchStart={() => movePlayer(1, 0)}
+            >
+              <ArrowRight className="h-6 w-6" />
+            </Button>
+            <div />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-12 w-12 touch-manipulation"
+              onTouchStart={() => movePlayer(0, 1)}
+            >
+              <ArrowDown className="h-6 w-6" />
+            </Button>
+            <div />
+          </div>
+        )}
+        
+        {!isMobile && (
+          <p className="text-xs text-center text-muted-foreground">
+            Pfeiltasten oder WASD zum Bewegen
+          </p>
+        )}
       </CardContent>
     </Card>
   );

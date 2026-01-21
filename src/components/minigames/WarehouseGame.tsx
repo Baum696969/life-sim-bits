@@ -206,7 +206,7 @@ const WarehouseGame = ({ onComplete }: WarehouseGameProps) => {
         {/* Conveyor Belt */}
         <div className="p-3 bg-muted/30 rounded-lg">
           <p className="text-xs text-muted-foreground mb-2">Förderband:</p>
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 touch-pan-x">
             <AnimatePresence>
               {conveyorBelt.map((pkg, i) => (
                 <motion.button
@@ -215,15 +215,16 @@ const WarehouseGame = ({ onComplete }: WarehouseGameProps) => {
                   animate={{ 
                     opacity: 1, 
                     x: 0,
-                    scale: selectedPackage?.id === pkg.id ? 1.2 : 1
+                    scale: selectedPackage?.id === pkg.id ? 1.15 : 1
                   }}
                   exit={{ opacity: 0, x: -50 }}
                   onClick={() => selectPackage(pkg)}
+                  onTouchStart={() => selectPackage(pkg)}
                   className={`
-                    text-3xl p-3 rounded-lg transition-all
+                    text-2xl md:text-3xl p-2 md:p-3 rounded-lg transition-all touch-manipulation shrink-0
                     ${selectedPackage?.id === pkg.id 
                       ? 'bg-primary ring-2 ring-primary' 
-                      : 'bg-background hover:bg-muted'
+                      : 'bg-background hover:bg-muted active:bg-muted'
                     }
                   `}
                 >
@@ -247,17 +248,18 @@ const WarehouseGame = ({ onComplete }: WarehouseGameProps) => {
         )}
 
         {/* Zones */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-1 md:gap-2">
           {PACKAGE_TYPES.map(type => (
             <Button
               key={type.zone}
               variant={selectedPackage ? 'default' : 'outline'}
               disabled={!selectedPackage}
               onClick={() => sortToZone(type.zone)}
-              className="h-16 flex flex-col"
+              onTouchStart={(e) => { if (selectedPackage) { e.preventDefault(); sortToZone(type.zone); } }}
+              className="h-14 md:h-16 flex flex-col touch-manipulation active:scale-95"
             >
-              <span className="text-xl">{type.emoji}</span>
-              <span className="text-xs">Zone {type.zone}</span>
+              <span className="text-lg md:text-xl">{type.emoji}</span>
+              <span className="text-[10px] md:text-xs">Zone {type.zone}</span>
             </Button>
           ))}
         </div>

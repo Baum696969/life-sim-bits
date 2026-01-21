@@ -257,13 +257,14 @@ const FastFoodGame = ({ onComplete }: FastFoodGameProps) => {
         </div>
 
         {/* Ingredients */}
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-6 gap-1 md:gap-2">
           {INGREDIENTS.map(item => (
             <Button
               key={item}
               variant="outline"
-              className="text-2xl h-12"
+              className="text-xl md:text-2xl h-11 md:h-12 touch-manipulation active:scale-95"
               onClick={() => addToTray(item)}
+              onTouchStart={(e) => { e.preventDefault(); addToTray(item); }}
             >
               {item}
             </Button>
@@ -272,10 +273,19 @@ const FastFoodGame = ({ onComplete }: FastFoodGameProps) => {
 
         {/* Actions */}
         <div className="flex gap-2">
-          <Button variant="destructive" onClick={clearTray} className="flex-1">
+          <Button 
+            variant="destructive" 
+            onClick={clearTray} 
+            onTouchStart={(e) => { e.preventDefault(); clearTray(); }}
+            className="flex-1 h-12 touch-manipulation"
+          >
             Leeren
           </Button>
-          <Button onClick={serveTray} className="flex-1 bg-success hover:bg-success/90">
+          <Button 
+            onClick={serveTray} 
+            onTouchStart={(e) => { e.preventDefault(); serveTray(); }}
+            className="flex-1 h-12 bg-success hover:bg-success/90 touch-manipulation"
+          >
             Servieren
           </Button>
         </div>

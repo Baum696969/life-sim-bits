@@ -172,9 +172,9 @@ const PickpocketGame = ({ onComplete }: PickpocketGameProps) => {
         </div>
         <Progress value={(timeLeft / TIME_LIMIT) * 100} className="h-2" />
       </CardHeader>
-      <CardContent className="space-y-6 pt-4">
+      <CardContent className="space-y-4 md:space-y-6 pt-4">
         <div className="text-center">
-          <p className="text-3xl font-mono tracking-wider">
+          <p className="text-2xl md:text-3xl font-mono tracking-wider">
             {currentWord.split('').map((char, i) => (
               <motion.span
                 key={i}
