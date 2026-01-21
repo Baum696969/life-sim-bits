@@ -9,6 +9,7 @@ import SpaceShooter from '../minigames/SpaceShooter';
 import BottleCollector from '../minigames/BottleCollector';
 import EnglishTest from '../minigames/EnglishTest';
 import GermanTest from '../minigames/GermanTest';
+import TimeSense from '../minigames/TimeSense';
 
 interface MinigameModalProps {
   isOpen: boolean;
@@ -43,6 +44,8 @@ const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney, pla
         return <EnglishTest onComplete={onComplete} playerAge={playerAge} />;
       case 'german':
         return <GermanTest onComplete={onComplete} playerAge={playerAge} />;
+      case 'timesense':
+        return <TimeSense onComplete={onComplete} playerAge={playerAge} />;
       default:
         return <div className="text-center p-8">Minigame nicht gefunden</div>;
     }
