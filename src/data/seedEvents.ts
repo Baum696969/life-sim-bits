@@ -9,7 +9,7 @@ const opt = (
   label: string,
   effects: { moneyDelta?: number; iqDelta?: number; healthDelta?: number; fitnessDelta?: number; looksDelta?: number; luckDelta?: number },
   resultText: string,
-  minigame?: 'flappy' | 'snake' | 'memory' | 'puzzle' | 'blackjack' | 'math'
+  minigame?: 'flappy' | 'snake' | 'memory' | 'puzzle' | 'blackjack' | 'math' | 'fastfood' | 'warehouse' | 'office' | 'pickpocket' | 'stealth'
 ): EventOption => ({
   id: createId(),
   label,
@@ -1097,6 +1097,41 @@ export const seedEvents: GameEvent[] = [
       opt('Besichtigung machen', { luckDelta: 5 }, 'Es könnte sich lohnen!'),
       opt('Kein Interesse', { luckDelta: 0 }, 'Du bist zufrieden, wo du bist.'),
       opt('Sofort kaufen', { moneyDelta: -50000, luckDelta: 10 }, 'Spontaner Kauf! Riskant aber aufregend.'),
+    ],
+  },
+
+  // === PFLICHT-PRAKTIKUM (14-16) ===
+  {
+    id: createId(),
+    title: 'Schulpraktikum',
+    text: 'Die Schule verlangt ein Pflichtpraktikum. Du musst 2 Wochen in einem Betrieb arbeiten. Wähle einen Bereich!',
+    minAge: 14,
+    maxAge: 16,
+    category: 'education',
+    weight: 100.0, // Very high weight to ensure it triggers
+    tags: ['mandatory', 'internship', 'school', 'work'],
+    options: [
+      {
+        id: createId(),
+        label: '🍔 Fast Food Restaurant',
+        effects: { moneyDelta: 150, fitnessDelta: 2 },
+        resultText: 'Du lernst den stressigen Alltag in der Gastronomie kennen.',
+        minigame: 'fastfood' as const,
+      },
+      {
+        id: createId(),
+        label: '📦 Lagerhalle',
+        effects: { moneyDelta: 150, fitnessDelta: 5 },
+        resultText: 'Schwere Arbeit, aber du wirst fitter!',
+        minigame: 'warehouse' as const,
+      },
+      {
+        id: createId(),
+        label: '🏢 Büro',
+        effects: { moneyDelta: 150, iqDelta: 2 },
+        resultText: 'Du lernst den Büroalltag kennen.',
+        minigame: 'office' as const,
+      },
     ],
   },
 ];

@@ -16,6 +16,31 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '1.0',
+    date: '21. Januar 2025',
+    title: 'Praktikum & Kriminelle Minigames',
+    highlights: [
+      'Pflicht-Praktikum mit 3 Minispielen',
+      'Verbrechen-Minigames',
+      'Admin Panel in 3 Bereiche',
+      'Erweitertes Freunde-System',
+    ],
+    details: [
+      'Pflicht-Praktikum zwischen 14-16 Jahren',
+      '🍔 Fast Food: Bestellungen aufnehmen und servieren',
+      '📦 Lager: Pakete in richtige Zonen sortieren',
+      '🏢 Büro: Aufgaben Schritt für Schritt erledigen',
+      'Jedes Praktikum dauert 2 Minuten',
+      '€150 Belohnung für erfolgreiches Praktikum',
+      '🤏 Taschendiebstahl: Schnell-Tipp-Spiel',
+      '🥷 Einbruch: Schleich-Spiel mit Wachen',
+      'Admin Panel: 3 Bereiche (Events, Praktika, Kriminalität)',
+      'Freunde haben jetzt Level (Bekannter → Bester Freund)',
+      'Streit-System mit Cooldown',
+      'Neue Freunde kennenlernen',
+    ],
+  },
+  {
     version: '0.9',
     date: '21. Januar 2025',
     title: 'Admin Tools & Zeitgefühl',
