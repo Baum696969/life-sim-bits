@@ -24,6 +24,19 @@ const CrimeModal = ({ isOpen, onClose, player, onCrimeResult }: CrimeModalProps)
   const crimes = crimeOptions;
 
   const handleCommitCrime = (crime: CrimeOption) => {
+    // Trigger minigame for certain crimes
+    if (crime.id === 'pickpocket' || crime.id === 'bankrobbery' || crime.id === 'cartheft') {
+      const minigameType = crime.id === 'pickpocket' ? 'pickpocket' : 'stealth';
+      onCrimeResult({ 
+        success: false, 
+        reward: 0, 
+        prisonYears: 0, 
+        record: { id: '', crimeType: crime.id, year: 0, caught: false, prisonYears: 0 },
+        crime,
+        triggerMinigame: minigameType
+      } as any);
+      return;
+    }
     const result = attemptCrime(crime, player);
     onCrimeResult({ ...result, crime });
   };

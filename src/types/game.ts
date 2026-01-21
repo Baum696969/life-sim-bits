@@ -139,7 +139,19 @@ export type MinigameType =
   | 'bottles'
   | 'english'
   | 'german'
-  | 'timesense';
+  | 'timesense'
+  | 'pickpocket'
+  | 'stealth'
+  | 'fastfood'
+  | 'warehouse'
+  | 'office';
+
+// Internship tracking
+export interface InternshipRecord {
+  fastfood: boolean;
+  warehouse: boolean;
+  office: boolean;
+}
 
 export interface MinigameResult {
   type: MinigameType;

@@ -10,6 +10,11 @@ import BottleCollector from '../minigames/BottleCollector';
 import EnglishTest from '../minigames/EnglishTest';
 import GermanTest from '../minigames/GermanTest';
 import TimeSense from '../minigames/TimeSense';
+import PickpocketGame from '../minigames/PickpocketGame';
+import StealthGame from '../minigames/StealthGame';
+import FastFoodGame from '../minigames/FastFoodGame';
+import WarehouseGame from '../minigames/WarehouseGame';
+import OfficeGame from '../minigames/OfficeGame';
 
 interface MinigameModalProps {
   isOpen: boolean;
@@ -46,6 +51,16 @@ const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney, pla
         return <GermanTest onComplete={onComplete} playerAge={playerAge} />;
       case 'timesense':
         return <TimeSense onComplete={onComplete} playerAge={playerAge} />;
+      case 'pickpocket':
+        return <PickpocketGame onComplete={onComplete} />;
+      case 'stealth':
+        return <StealthGame onComplete={onComplete} />;
+      case 'fastfood':
+        return <FastFoodGame onComplete={onComplete} />;
+      case 'warehouse':
+        return <WarehouseGame onComplete={onComplete} />;
+      case 'office':
+        return <OfficeGame onComplete={onComplete} />;
       default:
         return <div className="text-center p-8">Minigame nicht gefunden</div>;
     }

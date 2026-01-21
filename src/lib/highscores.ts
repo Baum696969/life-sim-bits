@@ -70,6 +70,11 @@ export const getMinigameLabel = (type: MinigameType): string => {
     english: 'Englisch-Test',
     german: 'Deutsch-Test',
     timesense: 'Zeitgefühl',
+    pickpocket: 'Taschendiebstahl',
+    stealth: 'Einbruch',
+    fastfood: 'Fast Food Praktikum',
+    warehouse: 'Lager Praktikum',
+    office: 'Büro Praktikum',
   };
   return labels[type];
 };
