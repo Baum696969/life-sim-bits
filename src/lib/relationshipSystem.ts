@@ -2,10 +2,16 @@ import {
   Partner, 
   Child, 
   RelationshipState, 
+  FamilyState,
+  FamilyMember,
+  FamilyActivity,
   maleNames, 
   femaleNames, 
   meetingStories,
-  childNames 
+  childNames,
+  parentNames,
+  siblingNames,
+  familyActivities
 } from '@/types/relationship';
 
 // Generate a random partner
@@ -109,13 +115,152 @@ export const ageChildren = (children: Child[]): Child[] => {
   }));
 };
 
+// Generate initial family (parents and possibly siblings)
+export const generateFamily = (playerBirthYear: number): FamilyState => {
+  const motherName = parentNames.mother[Math.floor(Math.random() * parentNames.mother.length)];
+  const fatherName = parentNames.father[Math.floor(Math.random() * parentNames.father.length)];
+  
+  // Parents are 20-35 years older
+  const motherAge = 20 + Math.floor(Math.random() * 16);
+  const fatherAge = 22 + Math.floor(Math.random() * 16);
+  
+  const mother: FamilyMember = {
+    id: `mother-${Date.now()}`,
+    name: motherName,
+    role: 'mother',
+    gender: 'female',
+    age: motherAge,
+    relationship: 70 + Math.floor(Math.random() * 30),
+    isAlive: true
+  };
+  
+  const father: FamilyMember = {
+    id: `father-${Date.now()}`,
+    name: fatherName,
+    role: 'father',
+    gender: 'male',
+    age: fatherAge,
+    relationship: 70 + Math.floor(Math.random() * 30),
+    isAlive: true
+  };
+  
+  // 50% chance of having 1-3 siblings
+  const siblings: FamilyMember[] = [];
+  if (Math.random() > 0.5) {
+    const siblingCount = Math.floor(Math.random() * 3) + 1;
+    for (let i = 0; i < siblingCount; i++) {
+      const gender: 'male' | 'female' = Math.random() > 0.5 ? 'male' : 'female';
+      const names = siblingNames[gender];
+      const name = names[Math.floor(Math.random() * names.length)];
+      // Siblings are -5 to +10 years from player (can be older or younger)
+      const ageDiff = Math.floor(Math.random() * 16) - 5;
+      
+      siblings.push({
+        id: `sibling-${Date.now()}-${i}`,
+        name,
+        role: 'sibling',
+        gender,
+        age: Math.max(0, ageDiff), // Will be adjusted each year
+        relationship: 60 + Math.floor(Math.random() * 40),
+        isAlive: true
+      });
+    }
+  }
+  
+  return { mother, father, siblings };
+};
+
+// Age family members
+export const ageFamily = (family: FamilyState): FamilyState => {
+  const agedMother = { ...family.mother, age: family.mother.age + 1 };
+  const agedFather = { ...family.father, age: family.father.age + 1 };
+  
+  // Check if parents die (chance increases with age)
+  if (agedMother.isAlive && agedMother.age > 60) {
+    const deathChance = (agedMother.age - 60) * 0.02;
+    if (Math.random() < deathChance) {
+      agedMother.isAlive = false;
+    }
+  }
+  if (agedFather.isAlive && agedFather.age > 58) {
+    const deathChance = (agedFather.age - 58) * 0.025;
+    if (Math.random() < deathChance) {
+      agedFather.isAlive = false;
+    }
+  }
+  
+  const agedSiblings = family.siblings.map(sibling => ({
+    ...sibling,
+    age: sibling.age + 1
+  }));
+  
+  return {
+    mother: agedMother,
+    father: agedFather,
+    siblings: agedSiblings
+  };
+};
+
+// Add a new sibling (when parents have another child)
+export const addSibling = (family: FamilyState): FamilyState => {
+  const gender: 'male' | 'female' = Math.random() > 0.5 ? 'male' : 'female';
+  const names = siblingNames[gender];
+  const name = names[Math.floor(Math.random() * names.length)];
+  
+  const newSibling: FamilyMember = {
+    id: `sibling-${Date.now()}`,
+    name,
+    role: 'sibling',
+    gender,
+    age: 0,
+    relationship: 50 + Math.floor(Math.random() * 30),
+    isAlive: true
+  };
+  
+  return {
+    ...family,
+    siblings: [...family.siblings, newSibling]
+  };
+};
+
+// Get available activities for age
+export const getAvailableActivities = (playerAge: number): FamilyActivity[] => {
+  return familyActivities.filter(
+    activity => playerAge >= activity.minAge && playerAge <= activity.maxAge
+  );
+};
+
+// Do an activity with family member
+export const doFamilyActivity = (
+  family: FamilyState, 
+  memberId: string, 
+  activity: FamilyActivity
+): FamilyState => {
+  const updateRelationship = (member: FamilyMember): FamilyMember => {
+    if (member.id === memberId) {
+      return {
+        ...member,
+        relationship: Math.min(100, member.relationship + activity.effects.relationshipBonus)
+      };
+    }
+    return member;
+  };
+  
+  return {
+    mother: updateRelationship(family.mother),
+    father: updateRelationship(family.father),
+    siblings: family.siblings.map(updateRelationship)
+  };
+};
+
 // Create initial relationship state
-export const createRelationshipState = (): RelationshipState => ({
+export const createRelationshipState = (playerBirthYear?: number): RelationshipState => ({
   partner: null,
   children: [],
   exPartners: [],
   totalMarriages: 0,
-  totalDivorces: 0
+  totalDivorces: 0,
+  family: playerBirthYear ? generateFamily(playerBirthYear) : null
 });
 
 // Check if player can marry
