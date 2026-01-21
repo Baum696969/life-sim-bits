@@ -4,6 +4,7 @@ export interface Partner {
   id: string;
   name: string;
   age: number;
+  gender: 'male' | 'female';
   looks: number;
   personality: 'romantic' | 'adventurous' | 'calm' | 'ambitious' | 'funny';
   compatibility: number; // 0-100

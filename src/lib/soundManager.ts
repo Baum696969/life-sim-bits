@@ -373,6 +373,67 @@ class SoundManager {
     setTimeout(() => this.createOscillatorSound(659, 0.06, 'sine', 0.1), 30);
   }
 
+  playBabyBorn(): void {
+    if (!this.enabled) return;
+    // Baby cry + celebration fanfare
+    this.createOscillatorSound(800, 0.1, 'sine', 0.15);
+    setTimeout(() => this.createOscillatorSound(1000, 0.08, 'sine', 0.12), 100);
+    setTimeout(() => this.createOscillatorSound(800, 0.1, 'sine', 0.1), 200);
+    // Celebration
+    setTimeout(() => {
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((freq, i) => {
+        setTimeout(() => this.createOscillatorSound(freq, 0.15, 'sine', 0.18), i * 80);
+      });
+    }, 400);
+  }
+
+  playPregnancyStart(): void {
+    if (!this.enabled) return;
+    // Heartbeat-like sound + gentle chime
+    this.createOscillatorSound(80, 0.15, 'sine', 0.2);
+    setTimeout(() => this.createOscillatorSound(60, 0.1, 'sine', 0.15), 200);
+    setTimeout(() => this.createOscillatorSound(80, 0.15, 'sine', 0.18), 400);
+    setTimeout(() => {
+      this.createChord([523, 659, 784], 0.3, 'sine', 0.12);
+    }, 600);
+  }
+
+  playPropertyBuy(): void {
+    if (!this.enabled) return;
+    // Cash register + door unlock
+    this.createOscillatorSound(2000, 0.05, 'sine', 0.15);
+    setTimeout(() => this.createOscillatorSound(2400, 0.04, 'sine', 0.12), 50);
+    setTimeout(() => {
+      // Key turning / door unlock
+      this.createOscillatorSound(300, 0.1, 'square', 0.1);
+      this.createOscillatorSound(400, 0.08, 'sine', 0.08);
+    }, 150);
+    setTimeout(() => {
+      // Success chime
+      this.createChord([523, 659, 784, 1047], 0.25, 'sine', 0.15);
+    }, 300);
+  }
+
+  playPropertySell(): void {
+    if (!this.enabled) return;
+    // Money counting sound
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => {
+        this.createOscillatorSound(1500 + Math.random() * 500, 0.03, 'sine', 0.1);
+      }, i * 60);
+    }
+    setTimeout(() => this.createChord([659, 784, 988], 0.2, 'sine', 0.12), 300);
+  }
+
+  playKindergeld(): void {
+    if (!this.enabled) return;
+    // Coin sounds for child benefit payment
+    this.createOscillatorSound(1200, 0.04, 'sine', 0.1);
+    setTimeout(() => this.createOscillatorSound(1400, 0.05, 'sine', 0.08), 50);
+    setTimeout(() => this.createOscillatorSound(1600, 0.06, 'sine', 0.07), 100);
+  }
+
   // Background Music
   startBackgroundMusic(): void {
     if (!this.enabled) return;
