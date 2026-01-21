@@ -13,6 +13,7 @@ const Index = () => {
   const [showGame, setShowGame] = useState(false);
   const [hasSave, setHasSave] = useState(false);
   const [playerName, setPlayerName] = useState('');
+  const [playerGender, setPlayerGender] = useState<'male' | 'female'>('male');
   const [showNameInput, setShowNameInput] = useState(false);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ const Index = () => {
 
   const startNewGame = () => {
     if (!playerName.trim()) return;
-    const player = createNewPlayer(playerName);
+    const player = createNewPlayer(playerName, playerGender);
     const state = createNewGameState(player);
     setGameState(state);
     setShowGame(true);
@@ -107,6 +108,32 @@ const Index = () => {
                 className="w-full max-w-xs px-4 py-3 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all"
                 autoFocus
               />
+              
+              {/* Gender Selection */}
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => setPlayerGender('male')}
+                  className={`px-6 py-3 rounded-lg border-2 transition-all ${
+                    playerGender === 'male' 
+                      ? 'border-blue-500 bg-blue-500/20 text-blue-400' 
+                      : 'border-muted-foreground/30 text-muted-foreground hover:border-blue-500/50'
+                  }`}
+                >
+                  <span className="text-2xl">👨</span>
+                  <p className="text-sm mt-1">Männlich</p>
+                </button>
+                <button
+                  onClick={() => setPlayerGender('female')}
+                  className={`px-6 py-3 rounded-lg border-2 transition-all ${
+                    playerGender === 'female' 
+                      ? 'border-pink-500 bg-pink-500/20 text-pink-400' 
+                      : 'border-muted-foreground/30 text-muted-foreground hover:border-pink-500/50'
+                  }`}
+                >
+                  <span className="text-2xl">👩</span>
+                  <p className="text-sm mt-1">Weiblich</p>
+                </button>
+              </div>
               <div className="flex gap-3 justify-center">
                 <Button
                   onClick={startNewGame}

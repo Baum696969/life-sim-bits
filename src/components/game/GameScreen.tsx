@@ -16,11 +16,16 @@ import JobModal from './JobModal';
 import CrimeModal, { CrimeResult } from './CrimeModal';
 import RelationshipModal from './RelationshipModal';
 import LottoModal from './LottoModal';
-import { RelationshipState, Partner, FamilyActivity } from '@/types/relationship';
-import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, generateFamily, addSibling } from '@/lib/relationshipSystem';
+import BabyNamingModal from './BabyNamingModal';
+import AdoptionModal from './AdoptionModal';
+import PropertyModal from './PropertyModal';
+import { RelationshipState, Partner, FamilyActivity, Child } from '@/types/relationship';
+import { PregnancyState, createPregnancyState, generatePregnancy, getSuggestedNames } from '@/types/pregnancy';
+import { PropertyState, createPropertyState, Property, calculateYearlyRent } from '@/types/property';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, addSibling } from '@/lib/relationshipSystem';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -44,10 +49,16 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const [showCrimeModal, setShowCrimeModal] = useState(false);
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [showLottoModal, setShowLottoModal] = useState(false);
+  const [showBabyNamingModal, setShowBabyNamingModal] = useState(false);
+  const [showAdoptionModal, setShowAdoptionModal] = useState(false);
+  const [showPropertyModal, setShowPropertyModal] = useState(false);
   const [hasBabysitterJob, setHasBabysitterJob] = useState(false);
+  const [pendingBabies, setPendingBabies] = useState<{ gender: 'male' | 'female'; suggestedName: string }[]>([]);
   const [relationshipState, setRelationshipState] = useState<RelationshipState>(() => 
     createRelationshipState(initialState.player.birthYear)
   );
+  const [pregnancyState, setPregnancyState] = useState<PregnancyState>(createPregnancyState);
+  const [propertyState, setPropertyState] = useState<PropertyState>(createPropertyState);
 
   // Start ambient music on mount
   useEffect(() => {
@@ -423,16 +434,70 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const handleTryForChild = () => {
     const chance = Math.random();
     if (chance < 0.4) {
-      const child = generateChild(gameState.player.birthYear, gameState.year);
+      // Start pregnancy instead of immediate birth
+      const pregnancy = generatePregnancy();
       soundManager.playPositiveEffect();
-      toast.success(`Ein Baby wurde geboren: ${child.name}! 👶`);
-      setRelationshipState(prev => ({
+      setPregnancyState(prev => ({
         ...prev,
-        children: [...prev.children, child]
+        isPregnant: true,
+        pregnancyMonth: 0,
+        expectedBabies: pregnancy.count,
+        babyGenders: pregnancy.genders
       }));
+      toast.success(pregnancy.count === 2 ? 'Zwillinge unterwegs! 👶👶' : 'Ein Baby ist unterwegs! 🤰');
     } else {
       toast.info('Dieses Jahr hat es leider nicht geklappt.');
     }
+  };
+
+  const handleAdoptChild = (name: string, gender: 'male' | 'female', age: number) => {
+    const adoptionCosts = [5000, 4000, 3000, 2500, 2000];
+    const cost = adoptionCosts.find((_, i) => [0, 2, 5, 8, 12][i] === age) || 3000;
+    
+    const child: Child = {
+      id: `child-${Date.now()}`,
+      name,
+      gender,
+      age,
+      birthYear: gameState.year - age,
+      relationship: 70
+    };
+    
+    setGameState(prev => ({
+      ...prev,
+      player: { ...prev.player, money: prev.player.money - cost }
+    }));
+    
+    setRelationshipState(prev => ({
+      ...prev,
+      children: [...prev.children, child]
+    }));
+    
+    soundManager.playPositiveEffect();
+    toast.success(`${name} wurde adoptiert! 🏠`);
+  };
+
+  const handleBabyBorn = (names: string[]) => {
+    const newChildren: Child[] = pendingBabies.map((baby, i) => ({
+      id: `child-${Date.now()}-${i}`,
+      name: names[i],
+      gender: baby.gender,
+      age: 0,
+      birthYear: gameState.year,
+      relationship: 90
+    }));
+    
+    setRelationshipState(prev => ({
+      ...prev,
+      children: [...prev.children, ...newChildren]
+    }));
+    
+    setPregnancyState(createPregnancyState());
+    setPendingBabies([]);
+    setShowBabyNamingModal(false);
+    
+    soundManager.playPositiveEffect();
+    toast.success(newChildren.length === 2 ? 'Deine Zwillinge sind geboren! 👶👶' : 'Dein Baby ist geboren! 👶');
   };
 
   const handleFamilyActivity = (memberId: string, activity: FamilyActivity) => {
@@ -641,12 +706,24 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onClose={() => setShowRelationshipModal(false)}
         player={gameState.player}
         relationshipState={relationshipState}
+        pregnancyState={pregnancyState}
         onFindPartner={handleFindPartner}
         onBreakup={handleBreakup}
         onMarry={handleMarry}
         onDivorce={handleDivorce}
         onTryForChild={handleTryForChild}
         onFamilyActivity={handleFamilyActivity}
+        onToggleBirthControl={() => setPregnancyState(prev => ({ ...prev, playerOnBirthControl: !prev.playerOnBirthControl }))}
+        onAskPartnerBirthControl={() => {
+          const willChange = Math.random() > 0.3;
+          if (willChange) {
+            setPregnancyState(prev => ({ ...prev, partnerOnBirthControl: !prev.partnerOnBirthControl }));
+            toast.success(pregnancyState.partnerOnBirthControl ? 'Partner nimmt keine Pille mehr.' : 'Partner nimmt jetzt die Pille.');
+          } else {
+            toast.info('Partner möchte nichts ändern.');
+          }
+        }}
+        onOpenAdoption={() => setShowAdoptionModal(true)}
       />
 
       {/* Lotto Modal */}
