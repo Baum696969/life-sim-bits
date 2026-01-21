@@ -1,4 +1,7 @@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import FlappyBird from '../minigames/FlappyBird';
 import SnakeGame from '../minigames/SnakeGame';
 import MemoryGame from '../minigames/MemoryGame';
@@ -26,6 +29,8 @@ interface MinigameModalProps {
 }
 
 const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney, playerAge }: MinigameModalProps) => {
+  const isMobile = useIsMobile();
+
   const renderMinigame = () => {
     switch (minigame) {
       case 'flappy':
@@ -66,6 +71,34 @@ const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney, pla
     }
   };
 
+  // Mobile: Fullscreen overlay
+  if (isMobile && isOpen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex flex-col safe-area-top safe-area-bottom">
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between p-3 border-b border-primary/30">
+          <h2 className="font-display text-lg text-primary">Minigame</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-10 w-10 rounded-full"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        
+        {/* Minigame Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 flex items-center justify-center">
+          <div className="w-full max-w-md">
+            {renderMinigame()}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: Dialog
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl bg-card border-primary/30 max-h-[90vh] overflow-y-auto">

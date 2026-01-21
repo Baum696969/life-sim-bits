@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { soundManager } from '@/lib/soundManager';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SequenceGameProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
@@ -12,6 +13,7 @@ interface SequenceGameProps {
 const SYMBOLS = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠'];
 
 const SequenceGame = ({ onComplete }: SequenceGameProps) => {
+  const isMobile = useIsMobile();
   const [gameState, setGameState] = useState<'ready' | 'showing' | 'input' | 'gameover'>('ready');
   const [sequence, setSequence] = useState<number[]>([]);
   const [playerSequence, setPlayerSequence] = useState<number[]>([]);
@@ -127,43 +129,52 @@ const SequenceGame = ({ onComplete }: SequenceGameProps) => {
     }
   };
 
+  // Responsive symbol button size
+  const symbolSize = isMobile ? 'w-14 h-14 md:w-20 md:h-20 text-2xl md:text-3xl' : 'w-16 h-16 md:w-20 md:h-20 text-3xl';
+
   return (
-    <div className="flex flex-col items-center gap-4">
-      <h2 className="font-display text-2xl text-primary">Merkspiel</h2>
+    <div className="flex flex-col items-center gap-4 w-full">
+      <h2 className="font-display text-xl md:text-2xl text-primary">Merkspiel</h2>
       
       {gameState === 'ready' ? (
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">
+          <p className="text-muted-foreground mb-4 text-sm md:text-base">
             Merke dir die Reihenfolge der Symbole!
           </p>
-          <Button onClick={startGame} className="game-btn bg-primary">
-            <Play className="mr-2 h-4 w-4" /> Start
+          <Button onClick={startGame} className="game-btn bg-primary min-h-[48px] px-6">
+            <Play className="mr-2 h-5 w-5" /> Start
           </Button>
         </div>
       ) : (
         <>
           <div className="text-center mb-2">
-            <p className="text-lg">Level: {level} | Punkte: {score}</p>
+            <p className="text-base md:text-lg">Level: {level} | Punkte: {score}</p>
             {gameState === 'showing' && (
-              <p className="text-primary animate-pulse">Merke dir die Reihenfolge...</p>
+              <p className="text-primary animate-pulse text-sm md:text-base">Merke dir die Reihenfolge...</p>
             )}
             {gameState === 'input' && (
-              <p className="text-primary">Gib die Reihenfolge ein!</p>
+              <p className="text-primary text-sm md:text-base">Gib die Reihenfolge ein!</p>
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 md:gap-3">
             {SYMBOLS.map((symbol, index) => (
               <motion.button
                 key={index}
                 onClick={() => handleSymbolClick(index)}
+                onTouchStart={(e) => {
+                  if (gameState === 'input') {
+                    e.preventDefault();
+                    handleSymbolClick(index);
+                  }
+                }}
                 disabled={gameState !== 'input'}
-                className={`w-16 h-16 md:w-20 md:h-20 rounded-xl text-3xl flex items-center justify-center transition-all border-2 ${
+                className={`${symbolSize} rounded-xl flex items-center justify-center transition-all border-2 touch-manipulation ${
                   highlightedSymbol === index
                     ? 'bg-primary/30 border-primary scale-110 shadow-lg'
                     : 'bg-muted border-muted-foreground/20'
-                } ${gameState === 'input' ? 'hover:bg-primary/20 cursor-pointer' : 'cursor-default'}`}
-                whileHover={gameState === 'input' ? { scale: 1.05 } : {}}
+                } ${gameState === 'input' ? 'active:bg-primary/20 active:scale-95 cursor-pointer' : 'cursor-default'}`}
+                style={{ WebkitTapHighlightColor: 'transparent' }}
                 whileTap={gameState === 'input' ? { scale: 0.95 } : {}}
               >
                 {symbol}
@@ -171,11 +182,11 @@ const SequenceGame = ({ onComplete }: SequenceGameProps) => {
             ))}
           </div>
 
-          <div className="flex gap-1 mt-2">
+          <div className="flex gap-1.5 mt-2">
             {sequence.map((_, i) => (
               <div
                 key={i}
-                className={`w-3 h-3 rounded-full ${
+                className={`w-3 h-3 rounded-full transition-colors ${
                   i < playerSequence.length
                     ? 'bg-primary'
                     : 'bg-muted-foreground/30'
@@ -190,10 +201,10 @@ const SequenceGame = ({ onComplete }: SequenceGameProps) => {
               animate={{ opacity: 1, scale: 1 }}
               className="text-center mt-4"
             >
-              <p className={`text-2xl font-display ${level > 3 ? 'text-primary' : 'text-destructive'}`}>
+              <p className={`text-xl md:text-2xl font-display ${level > 3 ? 'text-primary' : 'text-destructive'}`}>
                 {level > 3 ? 'Super gemacht!' : 'Leider falsch!'}
               </p>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm md:text-base">
                 Level {level} erreicht • {score + (level > 3 ? level * 20 : (level - 1) * 10)} Punkte
               </p>
             </motion.div>
