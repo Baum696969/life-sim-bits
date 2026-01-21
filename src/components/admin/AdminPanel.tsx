@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Shield, Lock, Unlock, Plus, Trash2, Save, X, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Shield, Lock, Unlock, Plus, Trash2, Save, X, ChevronDown, ChevronUp, Eye, EyeOff, Gamepad2, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import MinigameModal from '@/components/game/MinigameModal';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -22,6 +24,10 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'events' | 'minigames'>('events');
+  const [testingMinigame, setTestingMinigame] = useState<string | null>(null);
+  const [testAge, setTestAge] = useState(25);
+  const [lastTestResult, setLastTestResult] = useState<{ score: number; won: boolean; effects: any } | null>(null);
   const { toast } = useToast();
 
   const [newEvent, setNewEvent] = useState({
@@ -244,10 +250,39 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
     { value: 'memory', label: 'Memory' },
     { value: 'puzzle', label: 'Puzzle' },
     { value: 'math', label: 'Mathe-Test' },
-    { value: 'blackjack', label: 'Blackjack' },
     { value: 'sequence', label: 'Merkspiel' },
     { value: 'spaceshooter', label: 'Space Shooter' },
+    { value: 'bottles', label: 'Flaschensammeln' },
+    { value: 'english', label: 'Englisch-Test' },
+    { value: 'german', label: 'Deutsch-Test' },
   ];
+
+  const allMinigames = [
+    { id: 'flappy', name: 'Flappy Bird', emoji: '🐦', description: 'Springe durch Röhren ohne zu crashen' },
+    { id: 'snake', name: 'Snake', emoji: '🐍', description: 'Sammle Punkte ohne dich selbst zu beißen' },
+    { id: 'memory', name: 'Memory', emoji: '🧠', description: 'Finde passende Kartenpaare' },
+    { id: 'puzzle', name: 'Puzzle', emoji: '🧩', description: '3x3 Schiebepuzzle lösen' },
+    { id: 'math', name: 'Mathe-Test', emoji: '🔢', description: 'Beantworte Mathe-Fragen unter Zeitdruck' },
+    { id: 'sequence', name: 'Merkspiel', emoji: '🎯', description: 'Merke dir die Reihenfolge der Symbole' },
+    { id: 'spaceshooter', name: 'Space Shooter', emoji: '🚀', description: 'Schieße auf Feinde im Weltraum' },
+    { id: 'bottles', name: 'Flaschensammeln', emoji: '🍾', description: 'Sammle Flaschen für €0,25 pro Stück' },
+    { id: 'english', name: 'Englisch-Test', emoji: '🇬🇧', description: 'Übersetze Wörter ins Englische' },
+    { id: 'german', name: 'Deutsch-Test', emoji: '📝', description: 'Grammatik und Rechtschreibung' },
+  ];
+
+  const handleMinigameTest = (minigameId: string) => {
+    setTestingMinigame(minigameId);
+    setLastTestResult(null);
+  };
+
+  const handleMinigameComplete = (result: { score: number; won: boolean; effects: any }) => {
+    setLastTestResult(result);
+    setTestingMinigame(null);
+    toast({
+      title: result.won ? '🎉 Gewonnen!' : '❌ Verloren',
+      description: `Score: ${result.score} | Effekte: ${JSON.stringify(result.effects)}`,
+    });
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -278,197 +313,271 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
             </motion.div>
           ) : (
             <motion.div key="panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              {/* Create New Event Button */}
-              <Button onClick={() => setShowCreateForm(!showCreateForm)} variant="outline" className="w-full border-primary/50">
-                <Plus className="mr-2 h-4 w-4" /> {showCreateForm ? 'Formular ausblenden' : 'Neues Event erstellen'}
-              </Button>
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'events' | 'minigames')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="events">📋 Events</TabsTrigger>
+                  <TabsTrigger value="minigames">🎮 Minigames testen</TabsTrigger>
+                </TabsList>
 
-              {/* Create Event Form (Collapsible) */}
-              <AnimatePresence>
-                {showCreateForm && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-muted/50 rounded-lg p-4 overflow-hidden">
-                    <h3 className="font-display text-lg text-primary mb-4">Neues Event</h3>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="text-sm text-muted-foreground">Titel</label>
-                        <Input value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} placeholder="Event Titel" />
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground">Kategorie</label>
-                        <select value={newEvent.category} onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value })} className="w-full h-10 px-3 rounded-md border border-input bg-background">
-                          {Object.entries(categoryLabels).map(([value, label]) => (
-                            <option key={value} value={value}>{label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="mb-4">
-                      <label className="text-sm text-muted-foreground">Text</label>
-                      <textarea value={newEvent.text} onChange={(e) => setNewEvent({ ...newEvent, text: e.target.value })} placeholder="Event Beschreibung..." className="w-full h-20 px-3 py-2 rounded-md border border-input bg-background resize-none" />
-                    </div>
-                    <div className="grid grid-cols-4 gap-4 mb-4">
-                      <div>
-                        <label className="text-sm text-muted-foreground">Min Alter</label>
-                        <Input type="number" value={newEvent.min_age} onChange={(e) => setNewEvent({ ...newEvent, min_age: parseInt(e.target.value) || 0 })} />
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground">Max Alter</label>
-                        <Input type="number" value={newEvent.max_age} onChange={(e) => setNewEvent({ ...newEvent, max_age: parseInt(e.target.value) || 100 })} />
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground">Gewicht</label>
-                        <Input type="number" step="0.1" value={newEvent.weight} onChange={(e) => setNewEvent({ ...newEvent, weight: parseFloat(e.target.value) || 1 })} />
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground">Tags</label>
-                        <Input value={newEvent.tags} onChange={(e) => setNewEvent({ ...newEvent, tags: e.target.value })} placeholder="tag1, tag2" />
-                      </div>
-                    </div>
-                    {/* Options */}
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm text-muted-foreground">Optionen</label>
-                        <Button size="sm" variant="outline" onClick={addNewOption}><Plus className="h-4 w-4" /></Button>
-                      </div>
-                      {newEvent.options.map((option, index) => (
-                        <div key={index} className="bg-background/50 rounded-lg p-3 space-y-2">
-                          <div className="flex gap-2">
-                            <Input value={option.label} onChange={(e) => updateNewOption(index, 'label', e.target.value)} placeholder="Button Text" className="flex-1" />
-                            <select value={option.minigame} onChange={(e) => updateNewOption(index, 'minigame', e.target.value)} className="h-10 px-2 rounded-md border border-input bg-background text-sm">
-                              {minigameOptions.map(mg => <option key={mg.value} value={mg.value}>{mg.label}</option>)}
+                {/* Events Tab */}
+                <TabsContent value="events" className="space-y-4">
+                  {/* Create New Event Button */}
+                  <Button onClick={() => setShowCreateForm(!showCreateForm)} variant="outline" className="w-full border-primary/50">
+                    <Plus className="mr-2 h-4 w-4" /> {showCreateForm ? 'Formular ausblenden' : 'Neues Event erstellen'}
+                  </Button>
+
+                  {/* Create Event Form (Collapsible) */}
+                  <AnimatePresence>
+                    {showCreateForm && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-muted/50 rounded-lg p-4 overflow-hidden">
+                        <h3 className="font-display text-lg text-primary mb-4">Neues Event</h3>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <label className="text-sm text-muted-foreground">Titel</label>
+                            <Input value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} placeholder="Event Titel" />
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Kategorie</label>
+                            <select value={newEvent.category} onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value })} className="w-full h-10 px-3 rounded-md border border-input bg-background">
+                              {Object.entries(categoryLabels).map(([value, label]) => (
+                                <option key={value} value={value}>{label}</option>
+                              ))}
                             </select>
-                            <Button size="icon" variant="ghost" onClick={() => removeNewOption(index)} disabled={newEvent.options.length <= 1}><X className="h-4 w-4" /></Button>
                           </div>
-                          <Input value={option.resultText} onChange={(e) => updateNewOption(index, 'resultText', e.target.value)} placeholder="Ergebnis Text" />
-                          <div className="grid grid-cols-5 gap-2">
-                            {['moneyDelta', 'iqDelta', 'healthDelta', 'fitnessDelta', 'looksDelta'].map(key => (
-                              <div key={key}>
-                                <label className="text-xs text-muted-foreground">{key.replace('Delta', '')}</label>
-                                <Input type="number" value={(option.effects as any)[key] || 0} onChange={(e) => updateNewOption(index, `effects.${key}`, e.target.value)} />
+                        </div>
+                        <div className="mb-4">
+                          <label className="text-sm text-muted-foreground">Text</label>
+                          <textarea value={newEvent.text} onChange={(e) => setNewEvent({ ...newEvent, text: e.target.value })} placeholder="Event Beschreibung..." className="w-full h-20 px-3 py-2 rounded-md border border-input bg-background resize-none" />
+                        </div>
+                        <div className="grid grid-cols-4 gap-4 mb-4">
+                          <div>
+                            <label className="text-sm text-muted-foreground">Min Alter</label>
+                            <Input type="number" value={newEvent.min_age} onChange={(e) => setNewEvent({ ...newEvent, min_age: parseInt(e.target.value) || 0 })} />
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Max Alter</label>
+                            <Input type="number" value={newEvent.max_age} onChange={(e) => setNewEvent({ ...newEvent, max_age: parseInt(e.target.value) || 100 })} />
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Gewicht</label>
+                            <Input type="number" step="0.1" value={newEvent.weight} onChange={(e) => setNewEvent({ ...newEvent, weight: parseFloat(e.target.value) || 1 })} />
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Tags</label>
+                            <Input value={newEvent.tags} onChange={(e) => setNewEvent({ ...newEvent, tags: e.target.value })} placeholder="tag1, tag2" />
+                          </div>
+                        </div>
+                        {/* Options */}
+                        <div className="space-y-2 mb-4">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm text-muted-foreground">Optionen</label>
+                            <Button size="sm" variant="outline" onClick={addNewOption}><Plus className="h-4 w-4" /></Button>
+                          </div>
+                          {newEvent.options.map((option, index) => (
+                            <div key={index} className="bg-background/50 rounded-lg p-3 space-y-2">
+                              <div className="flex gap-2">
+                                <Input value={option.label} onChange={(e) => updateNewOption(index, 'label', e.target.value)} placeholder="Button Text" className="flex-1" />
+                                <select value={option.minigame} onChange={(e) => updateNewOption(index, 'minigame', e.target.value)} className="h-10 px-2 rounded-md border border-input bg-background text-sm">
+                                  {minigameOptions.map(mg => <option key={mg.value} value={mg.value}>{mg.label}</option>)}
+                                </select>
+                                <Button size="icon" variant="ghost" onClick={() => removeNewOption(index)} disabled={newEvent.options.length <= 1}><X className="h-4 w-4" /></Button>
                               </div>
-                            ))}
-                          </div>
+                              <Input value={option.resultText} onChange={(e) => updateNewOption(index, 'resultText', e.target.value)} placeholder="Ergebnis Text" />
+                              <div className="grid grid-cols-5 gap-2">
+                                {['moneyDelta', 'iqDelta', 'healthDelta', 'fitnessDelta', 'looksDelta'].map(key => (
+                                  <div key={key}>
+                                    <label className="text-xs text-muted-foreground">{key.replace('Delta', '')}</label>
+                                    <Input type="number" value={(option.effects as any)[key] || 0} onChange={(e) => updateNewOption(index, `effects.${key}`, e.target.value)} />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <Button onClick={handleCreateEvent} className="w-full bg-primary"><Save className="mr-2 h-4 w-4" /> Event speichern</Button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                        <Button onClick={handleCreateEvent} className="w-full bg-primary"><Save className="mr-2 h-4 w-4" /> Event speichern</Button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-              {/* Events List */}
-              <div>
-                <h3 className="font-display text-lg text-primary mb-3">Events ({events.length})</h3>
-                {isLoading ? (
-                  <p className="text-muted-foreground">Laden...</p>
-                ) : events.length === 0 ? (
-                  <p className="text-muted-foreground">Keine Events vorhanden.</p>
-                ) : (
-                  <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                    {events.map((event) => (
-                      <div key={event.id} className="bg-muted/30 rounded-lg overflow-hidden">
-                        {/* Compact Row */}
-                        <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50" onClick={() => handleEventClick(event)}>
-                          <div className="flex items-center gap-3 flex-1">
-                            <button onClick={(e) => { e.stopPropagation(); toggleEventActive(event); }} className={`p-1 rounded ${event.is_active ? 'text-primary' : 'text-muted-foreground'}`}>
-                              {event.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                            </button>
-                            <span className="font-medium">{event.title}</span>
-                            <span className="text-xs text-muted-foreground px-2 py-0.5 bg-background rounded">{categoryLabels[event.category] || event.category}</span>
-                            <span className="text-xs text-muted-foreground">{event.min_age}-{event.max_age}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button size="icon" variant="ghost" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event.id); }}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                            {expandedEventId === event.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </div>
-                        </div>
+                  {/* Events List */}
+                  <div>
+                    <h3 className="font-display text-lg text-primary mb-3">Events ({events.length})</h3>
+                    {isLoading ? (
+                      <p className="text-muted-foreground">Laden...</p>
+                    ) : events.length === 0 ? (
+                      <p className="text-muted-foreground">Keine Events vorhanden.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                        {events.map((event) => (
+                          <div key={event.id} className="bg-muted/30 rounded-lg overflow-hidden">
+                            {/* Compact Row */}
+                            <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50" onClick={() => handleEventClick(event)}>
+                              <div className="flex items-center gap-3 flex-1">
+                                <button onClick={(e) => { e.stopPropagation(); toggleEventActive(event); }} className={`p-1 rounded ${event.is_active ? 'text-primary' : 'text-muted-foreground'}`}>
+                                  {event.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                </button>
+                                <span className="font-medium">{event.title}</span>
+                                <span className="text-xs text-muted-foreground px-2 py-0.5 bg-background rounded">{categoryLabels[event.category] || event.category}</span>
+                                <span className="text-xs text-muted-foreground">{event.min_age}-{event.max_age}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button size="icon" variant="ghost" className="text-destructive h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event.id); }}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                {expandedEventId === event.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              </div>
+                            </div>
 
-                        {/* Expanded Editor */}
-                        <AnimatePresence>
-                          {expandedEventId === event.id && editingEvent && (
-                            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                              <div className="p-4 border-t border-border space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <label className="text-sm text-muted-foreground">Titel</label>
-                                    <Input value={editingEvent.title} onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })} />
-                                  </div>
-                                  <div>
-                                    <label className="text-sm text-muted-foreground">Kategorie</label>
-                                    <select value={editingEvent.category} onChange={(e) => setEditingEvent({ ...editingEvent, category: e.target.value })} className="w-full h-10 px-3 rounded-md border border-input bg-background">
-                                      {Object.entries(categoryLabels).map(([value, label]) => (
-                                        <option key={value} value={value}>{label}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-sm text-muted-foreground">Text</label>
-                                  <textarea value={editingEvent.text} onChange={(e) => setEditingEvent({ ...editingEvent, text: e.target.value })} className="w-full h-20 px-3 py-2 rounded-md border border-input bg-background resize-none" />
-                                </div>
-                                <div className="grid grid-cols-4 gap-4">
-                                  <div>
-                                    <label className="text-sm text-muted-foreground">Min Alter</label>
-                                    <Input type="number" value={editingEvent.min_age} onChange={(e) => setEditingEvent({ ...editingEvent, min_age: parseInt(e.target.value) || 0 })} />
-                                  </div>
-                                  <div>
-                                    <label className="text-sm text-muted-foreground">Max Alter</label>
-                                    <Input type="number" value={editingEvent.max_age} onChange={(e) => setEditingEvent({ ...editingEvent, max_age: parseInt(e.target.value) || 100 })} />
-                                  </div>
-                                  <div>
-                                    <label className="text-sm text-muted-foreground">Gewicht</label>
-                                    <Input type="number" step="0.1" value={editingEvent.weight} onChange={(e) => setEditingEvent({ ...editingEvent, weight: parseFloat(e.target.value) || 1 })} />
-                                  </div>
-                                  <div>
-                                    <label className="text-sm text-muted-foreground">Tags</label>
-                                    <Input value={editingEvent.tags} onChange={(e) => setEditingEvent({ ...editingEvent, tags: e.target.value })} />
-                                  </div>
-                                </div>
-                                {/* Options Editor */}
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <label className="text-sm text-muted-foreground">Optionen</label>
-                                    <Button size="sm" variant="outline" onClick={addEditingOption}><Plus className="h-4 w-4" /></Button>
-                                  </div>
-                                  {editingEvent.options?.map((option: any, index: number) => (
-                                    <div key={index} className="bg-background/50 rounded-lg p-3 space-y-2">
-                                      <div className="flex gap-2">
-                                        <Input value={option.label} onChange={(e) => updateEditingOption(index, 'label', e.target.value)} placeholder="Button Text" className="flex-1" />
-                                        <select value={option.minigame || ''} onChange={(e) => updateEditingOption(index, 'minigame', e.target.value)} className="h-10 px-2 rounded-md border border-input bg-background text-sm">
-                                          {minigameOptions.map(mg => <option key={mg.value} value={mg.value}>{mg.label}</option>)}
-                                        </select>
-                                        <Button size="icon" variant="ghost" onClick={() => removeEditingOption(index)} disabled={editingEvent.options.length <= 1}><X className="h-4 w-4" /></Button>
+                            {/* Expanded Editor */}
+                            <AnimatePresence>
+                              {expandedEventId === event.id && editingEvent && (
+                                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                                  <div className="p-4 border-t border-border space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <label className="text-sm text-muted-foreground">Titel</label>
+                                        <Input value={editingEvent.title} onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })} />
                                       </div>
-                                      <Input value={option.resultText} onChange={(e) => updateEditingOption(index, 'resultText', e.target.value)} placeholder="Ergebnis Text" />
-                                      <div className="grid grid-cols-5 gap-2">
-                                        {['moneyDelta', 'iqDelta', 'healthDelta', 'fitnessDelta', 'looksDelta'].map(key => (
-                                          <div key={key}>
-                                            <label className="text-xs text-muted-foreground">{key.replace('Delta', '')}</label>
-                                            <Input type="number" value={option.effects?.[key] || 0} onChange={(e) => updateEditingOption(index, `effects.${key}`, e.target.value)} />
-                                          </div>
-                                        ))}
+                                      <div>
+                                        <label className="text-sm text-muted-foreground">Kategorie</label>
+                                        <select value={editingEvent.category} onChange={(e) => setEditingEvent({ ...editingEvent, category: e.target.value })} className="w-full h-10 px-3 rounded-md border border-input bg-background">
+                                          {Object.entries(categoryLabels).map(([value, label]) => (
+                                            <option key={value} value={value}>{label}</option>
+                                          ))}
+                                        </select>
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button onClick={handleUpdateEvent} className="flex-1 bg-primary"><Save className="mr-2 h-4 w-4" /> Speichern</Button>
-                                  <Button onClick={() => { setExpandedEventId(null); setEditingEvent(null); }} variant="outline">Abbrechen</Button>
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                                    <div>
+                                      <label className="text-sm text-muted-foreground">Text</label>
+                                      <textarea value={editingEvent.text} onChange={(e) => setEditingEvent({ ...editingEvent, text: e.target.value })} className="w-full h-20 px-3 py-2 rounded-md border border-input bg-background resize-none" />
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-4">
+                                      <div>
+                                        <label className="text-sm text-muted-foreground">Min Alter</label>
+                                        <Input type="number" value={editingEvent.min_age} onChange={(e) => setEditingEvent({ ...editingEvent, min_age: parseInt(e.target.value) || 0 })} />
+                                      </div>
+                                      <div>
+                                        <label className="text-sm text-muted-foreground">Max Alter</label>
+                                        <Input type="number" value={editingEvent.max_age} onChange={(e) => setEditingEvent({ ...editingEvent, max_age: parseInt(e.target.value) || 100 })} />
+                                      </div>
+                                      <div>
+                                        <label className="text-sm text-muted-foreground">Gewicht</label>
+                                        <Input type="number" step="0.1" value={editingEvent.weight} onChange={(e) => setEditingEvent({ ...editingEvent, weight: parseFloat(e.target.value) || 1 })} />
+                                      </div>
+                                      <div>
+                                        <label className="text-sm text-muted-foreground">Tags</label>
+                                        <Input value={editingEvent.tags} onChange={(e) => setEditingEvent({ ...editingEvent, tags: e.target.value })} />
+                                      </div>
+                                    </div>
+                                    {/* Options Editor */}
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <label className="text-sm text-muted-foreground">Optionen</label>
+                                        <Button size="sm" variant="outline" onClick={addEditingOption}><Plus className="h-4 w-4" /></Button>
+                                      </div>
+                                      {editingEvent.options?.map((option: any, index: number) => (
+                                        <div key={index} className="bg-background/50 rounded-lg p-3 space-y-2">
+                                          <div className="flex gap-2">
+                                            <Input value={option.label} onChange={(e) => updateEditingOption(index, 'label', e.target.value)} placeholder="Button Text" className="flex-1" />
+                                            <select value={option.minigame || ''} onChange={(e) => updateEditingOption(index, 'minigame', e.target.value)} className="h-10 px-2 rounded-md border border-input bg-background text-sm">
+                                              {minigameOptions.map(mg => <option key={mg.value} value={mg.value}>{mg.label}</option>)}
+                                            </select>
+                                            <Button size="icon" variant="ghost" onClick={() => removeEditingOption(index)} disabled={editingEvent.options.length <= 1}><X className="h-4 w-4" /></Button>
+                                          </div>
+                                          <Input value={option.resultText} onChange={(e) => updateEditingOption(index, 'resultText', e.target.value)} placeholder="Ergebnis Text" />
+                                          <div className="grid grid-cols-5 gap-2">
+                                            {['moneyDelta', 'iqDelta', 'healthDelta', 'fitnessDelta', 'looksDelta'].map(key => (
+                                              <div key={key}>
+                                                <label className="text-xs text-muted-foreground">{key.replace('Delta', '')}</label>
+                                                <Input type="number" value={option.effects?.[key] || 0} onChange={(e) => updateEditingOption(index, `effects.${key}`, e.target.value)} />
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button onClick={handleUpdateEvent} className="flex-1 bg-primary"><Save className="mr-2 h-4 w-4" /> Speichern</Button>
+                                      <Button onClick={() => { setExpandedEventId(null); setEditingEvent(null); }} variant="outline">Abbrechen</Button>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
+                </TabsContent>
+
+                {/* Minigames Tab */}
+                <TabsContent value="minigames" className="space-y-4">
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <div className="flex items-center gap-4 mb-4">
+                      <Gamepad2 className="h-6 w-6 text-primary" />
+                      <h3 className="font-display text-lg text-primary">Minigame Tester</h3>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <label className="text-sm text-muted-foreground">Test-Alter (für altersabhängige Spiele)</label>
+                      <Input 
+                        type="number" 
+                        value={testAge} 
+                        onChange={(e) => setTestAge(parseInt(e.target.value) || 0)} 
+                        className="max-w-[100px]"
+                        min={0}
+                        max={100}
+                      />
+                    </div>
+
+                    {/* Last Test Result */}
+                    {lastTestResult && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`mb-4 p-3 rounded-lg ${lastTestResult.won ? 'bg-success/20 border border-success/50' : 'bg-destructive/20 border border-destructive/50'}`}
+                      >
+                        <p className="font-medium">Letztes Ergebnis:</p>
+                        <p className="text-sm">Score: {lastTestResult.score} | {lastTestResult.won ? 'Gewonnen ✓' : 'Verloren ✗'}</p>
+                        <p className="text-xs text-muted-foreground">Effekte: {JSON.stringify(lastTestResult.effects)}</p>
+                      </motion.div>
+                    )}
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {allMinigames.map((game) => (
+                        <motion.div
+                          key={game.id}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="bg-background/50 rounded-lg p-4 border border-primary/20 hover:border-primary/50 cursor-pointer transition-colors"
+                          onClick={() => handleMinigameTest(game.id)}
+                        >
+                          <div className="text-3xl mb-2">{game.emoji}</div>
+                          <h4 className="font-medium text-sm">{game.name}</h4>
+                          <p className="text-xs text-muted-foreground mt-1">{game.description}</p>
+                          <Button size="sm" variant="outline" className="mt-3 w-full">
+                            <Play className="h-3 w-3 mr-1" /> Starten
+                          </Button>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Minigame Modal for Testing */}
+        <MinigameModal
+          isOpen={!!testingMinigame}
+          minigame={testingMinigame}
+          onComplete={handleMinigameComplete}
+          onClose={() => setTestingMinigame(null)}
+          playerMoney={10000}
+          playerAge={testAge}
+        />
       </DialogContent>
     </Dialog>
   );
