@@ -258,9 +258,16 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
     { value: 'bottles', label: 'Flaschensammeln' },
     { value: 'english', label: 'Englisch-Test' },
     { value: 'german', label: 'Deutsch-Test' },
+    { value: 'timesense', label: 'Zeitgefühl' },
+    { value: 'pickpocket', label: 'Taschendiebstahl' },
+    { value: 'stealth', label: 'Einbruch' },
+    { value: 'fastfood', label: 'Fast Food Praktikum' },
+    { value: 'warehouse', label: 'Lager Praktikum' },
+    { value: 'office', label: 'Büro Praktikum' },
   ];
 
-  const allMinigames = [
+  // Minigames by category for testing
+  const eventMinigames = [
     { id: 'flappy', name: 'Flappy Bird', emoji: '🐦', description: 'Springe durch Röhren ohne zu crashen' },
     { id: 'snake', name: 'Snake', emoji: '🐍', description: 'Sammle Punkte ohne dich selbst zu beißen' },
     { id: 'memory', name: 'Memory', emoji: '🧠', description: 'Finde passende Kartenpaare' },
@@ -273,6 +280,19 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
     { id: 'german', name: 'Deutsch-Test', emoji: '📝', description: 'Grammatik und Rechtschreibung' },
     { id: 'timesense', name: 'Zeitgefühl', emoji: '⏱️', description: 'Stoppe genau nach X Sekunden ohne Uhr' },
   ];
+
+  const internshipMinigames = [
+    { id: 'fastfood', name: 'Fast Food Praktikum', emoji: '🍔', description: 'Nimm Bestellungen auf und serviere sie' },
+    { id: 'warehouse', name: 'Lager Praktikum', emoji: '📦', description: 'Sortiere Pakete in die richtigen Zonen' },
+    { id: 'office', name: 'Büro Praktikum', emoji: '🏢', description: 'Erledige Büroaufgaben Schritt für Schritt' },
+  ];
+
+  const crimeMinigames = [
+    { id: 'pickpocket', name: 'Taschendiebstahl', emoji: '🤏', description: 'Tippe Wörter schnell für erfolgreichen Diebstahl' },
+    { id: 'stealth', name: 'Einbruch', emoji: '🥷', description: 'Schleiche dich vorbei an Wachen und sammle Beute' },
+  ];
+
+  const allMinigames = [...eventMinigames, ...internshipMinigames, ...crimeMinigames];
 
   // Sound effects list for testing
   const soundEffects = [
@@ -598,23 +618,78 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
                       </motion.div>
                     )}
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {allMinigames.map((game) => (
-                        <motion.div
-                          key={game.id}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          className="bg-background/50 rounded-lg p-4 border border-primary/20 hover:border-primary/50 cursor-pointer transition-colors"
-                          onClick={() => handleMinigameTest(game.id)}
-                        >
-                          <div className="text-3xl mb-2">{game.emoji}</div>
-                          <h4 className="font-medium text-sm">{game.name}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">{game.description}</p>
-                          <Button size="sm" variant="outline" className="mt-3 w-full">
-                            <Play className="h-3 w-3 mr-1" /> Starten
-                          </Button>
-                        </motion.div>
-                      ))}
+                    {/* Event Minigames Section */}
+                    <div className="mb-6">
+                      <h4 className="font-medium text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                        <span className="text-lg">🎮</span> Event Minigames ({eventMinigames.length})
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {eventMinigames.map((game) => (
+                          <motion.div
+                            key={game.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="bg-background/50 rounded-lg p-3 border border-primary/20 hover:border-primary/50 cursor-pointer transition-colors"
+                            onClick={() => handleMinigameTest(game.id)}
+                          >
+                            <div className="text-2xl mb-1">{game.emoji}</div>
+                            <h4 className="font-medium text-xs">{game.name}</h4>
+                            <Button size="sm" variant="outline" className="mt-2 w-full text-xs h-7">
+                              <Play className="h-3 w-3 mr-1" /> Test
+                            </Button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Internship Minigames Section */}
+                    <div className="mb-6">
+                      <h4 className="font-medium text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                        <span className="text-lg">💼</span> Praktikums Minigames ({internshipMinigames.length})
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {internshipMinigames.map((game) => (
+                          <motion.div
+                            key={game.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/30 hover:border-yellow-500/60 cursor-pointer transition-colors"
+                            onClick={() => handleMinigameTest(game.id)}
+                          >
+                            <div className="text-3xl mb-2">{game.emoji}</div>
+                            <h4 className="font-medium text-sm">{game.name}</h4>
+                            <p className="text-xs text-muted-foreground mt-1">{game.description}</p>
+                            <Button size="sm" variant="outline" className="mt-3 w-full border-yellow-500/50">
+                              <Play className="h-3 w-3 mr-1" /> Praktikum starten
+                            </Button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Crime Minigames Section */}
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                        <span className="text-lg">🚨</span> Kriminelle Minigames ({crimeMinigames.length})
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {crimeMinigames.map((game) => (
+                          <motion.div
+                            key={game.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="bg-destructive/10 rounded-lg p-4 border border-destructive/30 hover:border-destructive/60 cursor-pointer transition-colors"
+                            onClick={() => handleMinigameTest(game.id)}
+                          >
+                            <div className="text-3xl mb-2">{game.emoji}</div>
+                            <h4 className="font-medium text-sm">{game.name}</h4>
+                            <p className="text-xs text-muted-foreground mt-1">{game.description}</p>
+                            <Button size="sm" variant="destructive" className="mt-3 w-full">
+                              <Play className="h-3 w-3 mr-1" /> Verbrechen testen
+                            </Button>
+                          </motion.div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
