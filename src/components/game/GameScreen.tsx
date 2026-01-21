@@ -490,6 +490,9 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onToggleNewspaperJob={handleToggleNewspaperJob}
         onToggleBabysitterJob={handleToggleBabysitterJob}
         hasBabysitterJob={hasBabysitterJob}
+        onOpenRelationships={() => setShowRelationshipModal(true)}
+        onOpenCrime={() => setShowCrimeModal(true)}
+        onOpenCasino={goToCasino}
       />
 
       {/* Minigame Modal */}

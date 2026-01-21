@@ -1,14 +1,17 @@
 import { Player } from '@/types/game';
 import { motion } from 'framer-motion';
-import { GraduationCap, Briefcase, DollarSign, Newspaper, Baby } from 'lucide-react';
+import { GraduationCap, Briefcase, DollarSign, Newspaper, Baby, Lock, Heart, Dices, Skull, Users, Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { sideJobs } from '@/lib/jobSystem';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface StatusBarProps {
   player: Player;
   onToggleNewspaperJob: () => void;
   onToggleBabysitterJob: () => void;
   hasBabysitterJob: boolean;
+  onOpenRelationships?: () => void;
+  onOpenCrime?: () => void;
+  onOpenCasino?: () => void;
 }
 
 const getSchoolGrade = (age: number, extraYears: number): string => {
@@ -24,11 +27,73 @@ const getSchoolGrade = (age: number, extraYears: number): string => {
   return '';
 };
 
-const StatusBar = ({ player, onToggleNewspaperJob, onToggleBabysitterJob, hasBabysitterJob }: StatusBarProps) => {
+const getLifePhase = (age: number): { label: string; emoji: string; color: string } => {
+  if (age <= 3) return { label: 'Baby', emoji: '👶', color: 'text-pink-400' };
+  if (age <= 5) return { label: 'Kleinkind', emoji: '💒', color: 'text-pink-300' };
+  if (age <= 12) return { label: 'Kind', emoji: '💑', color: 'text-blue-400' };
+  if (age <= 17) return { label: 'Teenager', emoji: '🧑', color: 'text-purple-400' };
+  if (age <= 25) return { label: 'Junger Erwachsener', emoji: '🧑‍🎓', color: 'text-green-400' };
+  if (age <= 40) return { label: 'Erwachsener', emoji: '🧔', color: 'text-yellow-400' };
+  if (age <= 60) return { label: 'Mittleres Alter', emoji: '🧑‍💼', color: 'text-orange-400' };
+  if (age <= 75) return { label: 'Senior', emoji: '🧓', color: 'text-gray-400' };
+  return { label: 'Hohes Alter', emoji: '👴', color: 'text-gray-300' };
+};
+
+interface FeatureButtonProps {
+  label: string;
+  icon: React.ReactNode;
+  requiredAge: number;
+  currentAge: number;
+  onClick?: () => void;
+  variant?: 'default' | 'destructive' | 'outline';
+  activeClass?: string;
+}
+
+const FeatureButton = ({ label, icon, requiredAge, currentAge, onClick, variant = 'outline', activeClass }: FeatureButtonProps) => {
+  const isLocked = currentAge < requiredAge;
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="relative">
+            <Button
+              variant={variant}
+              size="sm"
+              onClick={isLocked ? undefined : onClick}
+              disabled={isLocked}
+              className={`text-xs h-8 px-2 ${isLocked ? 'opacity-50 cursor-not-allowed' : activeClass || 'border-primary/50 hover:bg-primary/20'}`}
+            >
+              {icon}
+              <span className="hidden sm:inline ml-1">{label}</span>
+              {isLocked && <Lock className="h-3 w-3 ml-1 text-muted-foreground" />}
+            </Button>
+          </div>
+        </TooltipTrigger>
+        {isLocked && (
+          <TooltipContent>
+            <p>Ab {requiredAge} Jahren verfügbar</p>
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+const StatusBar = ({ 
+  player, 
+  onToggleNewspaperJob, 
+  onToggleBabysitterJob, 
+  hasBabysitterJob,
+  onOpenRelationships,
+  onOpenCrime,
+  onOpenCasino
+}: StatusBarProps) => {
   const isStudent = player.age >= 6 && player.age <= 16 + player.extraSchoolYears;
   const schoolGrade = getSchoolGrade(player.age, player.extraSchoolYears);
   const canHaveNewspaperJob = player.age >= 13 && isStudent;
   const canHaveBabysitterJob = player.age >= 14 && isStudent;
+  const lifePhase = getLifePhase(player.age);
 
   // Calculate yearly income
   let yearlyIncome = 0;
@@ -49,6 +114,15 @@ const StatusBar = ({ player, onToggleNewspaperJob, onToggleBabysitterJob, hasBab
       className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-primary/30 p-2 md:p-3 z-40"
     >
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        {/* Life Phase Badge */}
+        <div className={`flex items-center gap-2 ${lifePhase.color}`}>
+          <span className="text-xl">{lifePhase.emoji}</span>
+          <div>
+            <p className="text-sm font-medium">{lifePhase.label}</p>
+            <p className="text-xs text-muted-foreground">{player.age} Jahre</p>
+          </div>
+        </div>
+
         {/* Status (Student/Job) */}
         <div className="flex items-center gap-2 min-w-0">
           {player.inPrison ? (
@@ -73,7 +147,7 @@ const StatusBar = ({ player, onToggleNewspaperJob, onToggleBabysitterJob, hasBab
             <div className="flex items-center gap-2">
               <Briefcase className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-sm font-medium truncate max-w-[120px] md:max-w-none">{player.job.title}</p>
+                <p className="text-sm font-medium truncate max-w-[100px] md:max-w-none">{player.job.title}</p>
                 <p className="text-xs text-success">€{player.job.salary.toLocaleString()}/Jahr</p>
               </div>
             </div>
@@ -87,46 +161,77 @@ const StatusBar = ({ player, onToggleNewspaperJob, onToggleBabysitterJob, hasBab
 
         {/* Yearly Income */}
         {yearlyIncome > 0 && (
-          <div className="flex items-center gap-2 text-success">
+          <div className="flex items-center gap-1 text-success">
             <DollarSign className="h-4 w-4" />
-            <span className="text-sm font-medium">€{yearlyIncome.toLocaleString()}/Jahr</span>
+            <span className="text-xs font-medium">€{yearlyIncome.toLocaleString()}/J</span>
           </div>
         )}
 
-        {/* Side Jobs (only for students) */}
-        {isStudent && player.age >= 13 && (
-          <div className="flex items-center gap-1 md:gap-2">
-            <span className="text-xs text-muted-foreground hidden md:inline">Nebenjobs:</span>
-            
-            {canHaveNewspaperJob && (
-              <Button
-                variant={player.hasNewspaperJob ? "default" : "outline"}
-                size="sm"
+        {/* Feature Buttons with Age Locks */}
+        <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+          {/* Family/Relationships - Available from birth but shows lock */}
+          <FeatureButton
+            label="Familie"
+            icon={<Users className="h-3 w-3" />}
+            requiredAge={0}
+            currentAge={player.age}
+            onClick={onOpenRelationships}
+            activeClass="border-pink-500/50 hover:bg-pink-500/20"
+          />
+
+          {/* Partner Search - Age 16 */}
+          <FeatureButton
+            label="Partner"
+            icon={<Heart className="h-3 w-3" />}
+            requiredAge={16}
+            currentAge={player.age}
+            onClick={onOpenRelationships}
+            activeClass="border-pink-500/50 hover:bg-pink-500/20"
+          />
+
+          {/* Crime - Age 14 */}
+          <FeatureButton
+            label="Verbrechen"
+            icon={<Skull className="h-3 w-3" />}
+            requiredAge={14}
+            currentAge={player.age}
+            onClick={onOpenCrime}
+            activeClass="border-red-500/50 hover:bg-red-500/20"
+          />
+
+          {/* Casino - Age 16 */}
+          <FeatureButton
+            label="Casino"
+            icon={<Dices className="h-3 w-3" />}
+            requiredAge={16}
+            currentAge={player.age}
+            onClick={onOpenCasino}
+            activeClass="border-yellow-500/50 hover:bg-yellow-500/20"
+          />
+
+          {/* Side Jobs for Students */}
+          {isStudent && (
+            <>
+              <FeatureButton
+                label="Zeitung"
+                icon={<Newspaper className="h-3 w-3" />}
+                requiredAge={13}
+                currentAge={player.age}
                 onClick={onToggleNewspaperJob}
-                className={`text-xs h-7 px-2 ${player.hasNewspaperJob ? 'bg-primary' : 'border-primary/50'}`}
-              >
-                <Newspaper className="h-3 w-3 mr-1" />
-                <span className="hidden sm:inline">Zeitung</span>
-                <span className="sm:hidden">📰</span>
-                {player.hasNewspaperJob && <span className="ml-1 text-success">+€50</span>}
-              </Button>
-            )}
-            
-            {canHaveBabysitterJob && (
-              <Button
-                variant={hasBabysitterJob ? "default" : "outline"}
-                size="sm"
+                activeClass={player.hasNewspaperJob ? 'bg-primary text-primary-foreground' : 'border-primary/50'}
+              />
+              
+              <FeatureButton
+                label="Babysitter"
+                icon={<Baby className="h-3 w-3" />}
+                requiredAge={14}
+                currentAge={player.age}
                 onClick={onToggleBabysitterJob}
-                className={`text-xs h-7 px-2 ${hasBabysitterJob ? 'bg-primary' : 'border-primary/50'}`}
-              >
-                <Baby className="h-3 w-3 mr-1" />
-                <span className="hidden sm:inline">Babysitter</span>
-                <span className="sm:hidden">👶</span>
-                {hasBabysitterJob && <span className="ml-1 text-success">+€80</span>}
-              </Button>
-            )}
-          </div>
-        )}
+                activeClass={hasBabysitterJob ? 'bg-primary text-primary-foreground' : 'border-primary/50'}
+              />
+            </>
+          )}
+        </div>
       </div>
     </motion.div>
   );
