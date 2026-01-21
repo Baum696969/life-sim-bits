@@ -20,6 +20,12 @@ export type RelationshipStatus =
   | 'divorced'
   | 'widowed';
 
+export type FriendshipLevel = 
+  | 'acquaintance'  // Bekannter (0-25)
+  | 'casual'        // Kumpel (26-50)
+  | 'good'          // Guter Freund (51-75)
+  | 'best'          // Bester Freund (76-100);
+
 export interface Child {
   id: string;
   name: string;
@@ -71,6 +77,11 @@ export interface Friend {
   age: number;
   friendship: number; // 0-100
   personality: 'gamer' | 'sporty' | 'creative' | 'chill' | 'adventurous';
+  level: FriendshipLevel; // New: friendship tier
+  metAt: string; // Where/how you met
+  yearsKnown: number;
+  hadFight: boolean; // Currently in a fight?
+  fightCooldown: number; // Years until fight can be resolved
 }
 
 export interface FriendActivity {

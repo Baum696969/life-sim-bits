@@ -277,25 +277,62 @@ export const generateInitialFriends = (playerAge: number, playerGender: 'male' |
   
   const numFriends = Math.min(Math.floor(playerAge / 3), 5) + Math.floor(Math.random() * 2);
   const friends: Friend[] = [];
+  const meetPlaces = ['Kindergarten', 'Schule', 'Nachbarschaft', 'Sportverein', 'Spielplatz'];
   
   for (let i = 0; i < numFriends; i++) {
     const gender: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female';
     const names = friendNames[gender];
     const usedNames = friends.map(f => f.name);
     const availableNames = names.filter(n => !usedNames.includes(n));
+    const friendship = 50 + Math.floor(Math.random() * 30);
     
     const friend: Friend = {
       id: `friend-${Date.now()}-${i}`,
       name: availableNames[Math.floor(Math.random() * availableNames.length)] || `Freund ${i + 1}`,
       gender,
       age: playerAge + Math.floor(Math.random() * 3) - 1,
-      friendship: 50 + Math.floor(Math.random() * 30),
-      personality: friendPersonalities[Math.floor(Math.random() * friendPersonalities.length)]
+      friendship,
+      personality: friendPersonalities[Math.floor(Math.random() * friendPersonalities.length)],
+      level: getFriendshipLevel(friendship),
+      metAt: meetPlaces[Math.floor(Math.random() * meetPlaces.length)],
+      yearsKnown: Math.floor(Math.random() * Math.max(1, playerAge - 4)),
+      hadFight: false,
+      fightCooldown: 0
     };
     friends.push(friend);
   }
   
   return friends;
+};
+
+// Get friendship level from score
+export const getFriendshipLevel = (friendship: number): Friend['level'] => {
+  if (friendship >= 76) return 'best';
+  if (friendship >= 51) return 'good';
+  if (friendship >= 26) return 'casual';
+  return 'acquaintance';
+};
+
+// Generate a new friend
+export const generateNewFriend = (playerAge: number): Friend => {
+  const gender: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female';
+  const names = friendNames[gender];
+  const meetPlaces = ['Party', 'Arbeit', 'Online', 'Fitnessstudio', 'Café', 'Konzert', 'Uni'];
+  const friendship = 20 + Math.floor(Math.random() * 20);
+  
+  return {
+    id: `friend-${Date.now()}-${Math.random()}`,
+    name: names[Math.floor(Math.random() * names.length)],
+    gender,
+    age: playerAge + Math.floor(Math.random() * 10) - 5,
+    friendship,
+    personality: friendPersonalities[Math.floor(Math.random() * friendPersonalities.length)],
+    level: getFriendshipLevel(friendship),
+    metAt: meetPlaces[Math.floor(Math.random() * meetPlaces.length)],
+    yearsKnown: 0,
+    hadFight: false,
+    fightCooldown: 0
+  };
 };
 
 // Reset yearly activity usage (call at start of new year)
