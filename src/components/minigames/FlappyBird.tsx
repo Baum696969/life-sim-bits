@@ -7,24 +7,24 @@ interface FlappyBirdProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
 }
 
-// Much slower and easier initial settings
-const BASE_GRAVITY = 0.15; // Very low gravity - falls slowly
-const BASE_JUMP_FORCE = -4; // Gentle jump
-const BASE_PIPE_SPEED = 1.5; // Slow pipe movement
-const PIPE_GAP = 200; // Wide gap
+// Much slower and easier initial settings - more like original Flappy Bird
+const BASE_GRAVITY = 0.08; // Even lower gravity - falls very slowly
+const BASE_JUMP_FORCE = -3.5; // Gentle but responsive jump
+const BASE_PIPE_SPEED = 1.2; // Slower pipe movement
+const PIPE_GAP = 220; // Wider gap for easier gameplay
 const PIPE_WIDTH = 60;
 const BIRD_SIZE = 30;
 const MAX_LIVES = 3;
-const MAX_FALL_SPEED = 4; // Limit fall speed
+const MAX_FALL_SPEED = 2.5; // Much lower max fall speed - key for feeling like original
 
-// Difficulty scaling - very gradual
+// Difficulty scaling - very gradual (even slower than before)
 const getDynamicValues = (score: number) => {
-  const tier = Math.min(Math.floor(score / 7), 4); // Slower scaling
+  const tier = Math.min(Math.floor(score / 10), 3); // Even slower scaling - every 10 points
   
   return {
-    gravity: BASE_GRAVITY + (tier * 0.02),
-    jumpForce: BASE_JUMP_FORCE - (tier * 0.3),
-    pipeSpeed: BASE_PIPE_SPEED + (tier * 0.25),
+    gravity: BASE_GRAVITY + (tier * 0.015), // Slower gravity increase
+    jumpForce: BASE_JUMP_FORCE - (tier * 0.2), // Smaller jump force increase
+    pipeSpeed: BASE_PIPE_SPEED + (tier * 0.15), // Slower speed increase
   };
 };
 

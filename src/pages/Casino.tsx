@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, Minus, Lock } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, BlackjackHand, BlackjackState, Suit, Rank } from '@/types/game';
-import { loadGame, saveGame, formatMoney } from '@/lib/gameUtils';
+import { loadGame, saveGame, formatMoney, hasSavedGame } from '@/lib/gameUtils';
 import { soundManager } from '@/lib/soundManager';
 
 const SUITS: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
 const RANKS: Rank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const MIN_AGE = 16;
+const DEALER_DELAY = 1000; // Slower dealer animation (was 500)
 
 const createDeck = (): Card[] => {
   const deck: Card[] = [];
@@ -59,14 +60,28 @@ const Casino = () => {
   const [deck, setDeck] = useState<Card[]>([]);
   const [result, setResult] = useState<string | null>(null);
   const [winAmount, setWinAmount] = useState(0);
+  const [hasActiveGame, setHasActiveGame] = useState(false);
 
   useEffect(() => {
     const saved = loadGame();
     if (saved) {
       setPlayerMoney(saved.player.money);
       setPlayerAge(saved.player.age);
+      setHasActiveGame(true);
+    } else {
+      setHasActiveGame(hasSavedGame());
     }
   }, []);
+
+  const handleBack = () => {
+    // If there's an active game, go back to continue playing
+    if (hasActiveGame) {
+      navigate('/');
+      // The Index page will detect the saved game and continue
+    } else {
+      navigate('/');
+    }
+  };
 
   // Check age restriction
   if (playerAge < MIN_AGE && playerAge > 0) {
@@ -81,11 +96,9 @@ const Casino = () => {
           <p className="text-lg text-foreground mb-6">
             Dein Alter: {playerAge} Jahre
           </p>
-          <Link to="/">
-            <Button className="game-btn">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Zurück zum Spiel
-            </Button>
-          </Link>
+          <Button className="game-btn" onClick={handleBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Zurück zum Spiel
+          </Button>
         </div>
       </div>
     );
@@ -170,24 +183,27 @@ const Casino = () => {
           setDealerHand([...currentHand]);
           setDeck(currentDeck);
           dealerPlay();
-        }, 500);
+        }, DEALER_DELAY); // Slower dealer animation
       } else {
-        const playerValue = calculateHandValue(playerHand);
-        dealerValue = calculateHandValue(currentHand);
-        
-        if (dealerValue > 21) {
-          endGame('win', bet);
-        } else if (playerValue > dealerValue) {
-          endGame('win', bet);
-        } else if (playerValue < dealerValue) {
-          endGame('lose', -bet);
-        } else {
-          endGame('push', 0);
-        }
+        // Wait before showing result
+        setTimeout(() => {
+          const playerValue = calculateHandValue(playerHand);
+          dealerValue = calculateHandValue(currentHand);
+          
+          if (dealerValue > 21) {
+            endGame('win', bet);
+          } else if (playerValue > dealerValue) {
+            endGame('win', bet);
+          } else if (playerValue < dealerValue) {
+            endGame('lose', -bet);
+          } else {
+            endGame('push', 0);
+          }
+        }, 500);
       }
     };
     
-    setTimeout(dealerPlay, 500);
+    setTimeout(dealerPlay, DEALER_DELAY);
   };
 
   const endGame = (resultType: string, amount: number) => {
@@ -263,11 +279,9 @@ const Casino = () => {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 md:mb-12">
-          <Link to="/">
-            <Button variant="ghost" className="text-muted-foreground">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Zurück
-            </Button>
-          </Link>
+          <Button variant="ghost" className="text-muted-foreground" onClick={handleBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Zurück zum Spiel
+          </Button>
           <h1 className="font-display text-4xl md:text-5xl text-primary text-glow">Casino</h1>
           <div className="text-right">
             <span className="text-2xl md:text-3xl font-bold text-primary">

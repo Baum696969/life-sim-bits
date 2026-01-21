@@ -5,13 +5,17 @@ import {
   FamilyState,
   FamilyMember,
   FamilyActivity,
+  Friend,
+  YearlyActivityUsage,
   maleNames, 
   femaleNames, 
   meetingStories,
   childNames,
   parentNames,
   siblingNames,
-  familyActivities
+  familyActivities,
+  friendNames,
+  friendPersonalities
 } from '@/types/relationship';
 
 // Generate a random partner
@@ -261,8 +265,62 @@ export const createRelationshipState = (playerBirthYear?: number): RelationshipS
   exPartners: [],
   totalMarriages: 0,
   totalDivorces: 0,
-  family: playerBirthYear ? generateFamily(playerBirthYear) : null
+  family: playerBirthYear ? generateFamily(playerBirthYear) : null,
+  friends: [],
+  yearlyActivityUsage: {},
+  yearlyFriendActivityUsage: {}
 });
+
+// Generate initial friends based on age
+export const generateInitialFriends = (playerAge: number, playerGender: 'male' | 'female'): Friend[] => {
+  if (playerAge < 4) return [];
+  
+  const numFriends = Math.min(Math.floor(playerAge / 3), 5) + Math.floor(Math.random() * 2);
+  const friends: Friend[] = [];
+  
+  for (let i = 0; i < numFriends; i++) {
+    const gender: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female';
+    const names = friendNames[gender];
+    const usedNames = friends.map(f => f.name);
+    const availableNames = names.filter(n => !usedNames.includes(n));
+    
+    const friend: Friend = {
+      id: `friend-${Date.now()}-${i}`,
+      name: availableNames[Math.floor(Math.random() * availableNames.length)] || `Freund ${i + 1}`,
+      gender,
+      age: playerAge + Math.floor(Math.random() * 3) - 1,
+      friendship: 50 + Math.floor(Math.random() * 30),
+      personality: friendPersonalities[Math.floor(Math.random() * friendPersonalities.length)]
+    };
+    friends.push(friend);
+  }
+  
+  return friends;
+};
+
+// Reset yearly activity usage (call at start of new year)
+export const resetYearlyActivityUsage = (state: RelationshipState): RelationshipState => ({
+  ...state,
+  yearlyActivityUsage: {},
+  yearlyFriendActivityUsage: {}
+});
+
+// Check if activity can be done this year
+export const canDoActivity = (activityId: string, maxPerYear: number, usage: YearlyActivityUsage): boolean => {
+  const currentUsage = usage[activityId] || 0;
+  return currentUsage < maxPerYear;
+};
+
+// Record activity usage
+export const recordActivityUsage = (activityId: string, usage: YearlyActivityUsage): YearlyActivityUsage => ({
+  ...usage,
+  [activityId]: (usage[activityId] || 0) + 1
+});
+
+// Get random excuse for an activity
+export const getRandomExcuse = (excuses: string[]): string => {
+  return excuses[Math.floor(Math.random() * excuses.length)];
+};
 
 // Check if player can marry
 export const canMarry = (partner: Partner | null): boolean => {

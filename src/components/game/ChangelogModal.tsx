@@ -16,6 +16,29 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '0.8',
+    date: '21. Januar 2025',
+    title: 'Aktivitäten & Casino Update',
+    highlights: [
+      'Aktivitäten-Limit pro Jahr',
+      'Aktivitäten mit Freunden',
+      'Eltern zahlen bis 18',
+      'Flappy Bird überarbeitet',
+    ],
+    details: [
+      'Aktivitäten haben jetzt ein Limit pro Jahr (z.B. Spielplatz 1x)',
+      'Ausreden werden angezeigt wenn Limit erreicht',
+      'Neues Freunde-System mit eigenen Aktivitäten',
+      'Gaming, Sport, Party, Konzert mit Freunden',
+      'Eltern bezahlen Arzt- und Aktivitätskosten bis 18',
+      'Nach 18 kann man ins Minus gehen',
+      'Blackjack Dealer ist jetzt langsamer',
+      'Casino: Zurück zum Spiel statt Hauptmenü',
+      'Flappy Bird: Langsameres Fallen wie im Original',
+      'Changelog wird automatisch aktualisiert',
+    ],
+  },
+  {
     version: '0.7',
     date: '20. Januar 2025',
     title: 'Familien & Events Update',
@@ -31,8 +54,6 @@ const changelog: ChangelogEntry[] = [
       'Neues Event: Erstes Bier (Eltern/Freunde/Nein)',
       'Neues Event: Lotto spielen (1% auf €10.000)',
       'Neues Event: Familienausflüge und Kino',
-      'Neues Event: Geschwisterchen bekommen',
-      'Neues Event: Spielen mit Freunden',
     ],
   },
   {
