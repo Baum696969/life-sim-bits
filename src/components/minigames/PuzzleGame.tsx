@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Shuffle } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PuzzleGameProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
@@ -10,6 +11,7 @@ interface PuzzleGameProps {
 const GRID_SIZE = 3;
 
 const PuzzleGame = ({ onComplete }: PuzzleGameProps) => {
+  const isMobile = useIsMobile();
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'gameover'>('ready');
   const [tiles, setTiles] = useState<number[]>([]);
   const [moves, setMoves] = useState(0);
@@ -95,33 +97,40 @@ const PuzzleGame = ({ onComplete }: PuzzleGameProps) => {
     }
   }, [tiles, gameState, moves, startTime, onComplete]);
 
+  // Responsive tile size
+  const tileSize = isMobile ? 'w-16 h-16 text-xl' : 'w-20 h-20 text-2xl';
+
   return (
-    <div className="flex flex-col items-center gap-4">
-      <h2 className="font-display text-2xl text-primary">Sliding Puzzle</h2>
+    <div className="flex flex-col items-center gap-4 w-full">
+      <h2 className="font-display text-xl md:text-2xl text-primary">Sliding Puzzle</h2>
       
       {gameState === 'ready' ? (
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Sortiere die Zahlen von 1-8!</p>
-          <Button onClick={startGame} className="game-btn bg-primary">
-            <Play className="mr-2 h-4 w-4" /> Start
+          <p className="text-muted-foreground mb-4 text-sm md:text-base">Sortiere die Zahlen von 1-8!</p>
+          <Button onClick={startGame} className="game-btn bg-primary min-h-[48px] px-6">
+            <Play className="mr-2 h-5 w-5" /> Start
           </Button>
         </div>
       ) : (
         <>
           <div 
-            className="grid gap-1 p-2 bg-muted/50 rounded-lg"
+            className="grid gap-1.5 md:gap-2 p-3 bg-muted/50 rounded-lg"
             style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
           >
             {tiles.map((tile, index) => (
               <motion.button
                 key={index}
                 onClick={() => handleTileClick(index)}
-                className={`w-20 h-20 rounded-lg text-2xl font-display flex items-center justify-center transition-all ${
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleTileClick(index);
+                }}
+                className={`${tileSize} rounded-lg font-display flex items-center justify-center transition-all touch-manipulation ${
                   tile === 0
                     ? 'bg-transparent'
-                    : 'bg-primary text-primary-foreground hover:bg-primary/80'
+                    : 'bg-primary text-primary-foreground active:bg-primary/80'
                 }`}
-                whileHover={tile !== 0 ? { scale: 1.05 } : {}}
+                style={{ WebkitTapHighlightColor: 'transparent' }}
                 whileTap={tile !== 0 ? { scale: 0.95 } : {}}
                 layout
               >
@@ -131,12 +140,12 @@ const PuzzleGame = ({ onComplete }: PuzzleGameProps) => {
           </div>
           
           <div className="text-center">
-            <p className="text-lg">Züge: {moves}</p>
+            <p className="text-base md:text-lg">Züge: {moves}</p>
           </div>
           
           {gameState === 'gameover' && (
             <div className="text-center animate-bounce-in">
-              <p className="text-2xl font-display text-success mb-2">Gelöst!</p>
+              <p className="text-xl md:text-2xl font-display text-success mb-2">Gelöst!</p>
               <p className="text-muted-foreground">In {moves} Zügen</p>
             </div>
           )}
