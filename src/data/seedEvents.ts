@@ -828,6 +828,52 @@ export const seedEvents: GameEvent[] = [
       opt('Weitergehen', { luckDelta: 0 }, 'Nicht dein Ding.'),
     ],
   },
+  // LOTTO EVENT
+  {
+    id: createId(),
+    title: 'Lotterie',
+    text: 'Du gehst am Kiosk vorbei und siehst die Lotto-Anzeige. "Heute 10.000€ Jackpot!"',
+    minAge: 18,
+    maxAge: 100,
+    category: 'financial',
+    weight: 1.5,
+    tags: ['money', 'gambling', 'lotto', 'chance'],
+    options: [
+      opt('Lottoschein kaufen (€5)', { moneyDelta: -5 }, 'Du kaufst einen Schein... die Ziehung ist heute Abend!'),
+      opt('Kein Glücksspiel', { luckDelta: 1 }, 'Vernünftige Entscheidung.'),
+    ],
+  },
+  // NEW SIBLING EVENT (triggers adding sibling)
+  {
+    id: createId(),
+    title: 'Deine Eltern erwarten ein Baby!',
+    text: 'Große Neuigkeiten! Deine Mutter ist schwanger. Du bekommst bald ein Geschwisterchen!',
+    minAge: 2,
+    maxAge: 15,
+    category: 'social',
+    weight: 0.6,
+    tags: ['family', 'sibling', 'newborn', 'add_sibling'],
+    options: [
+      opt('Ich freu mich so!', { luckDelta: 5, healthDelta: 3 }, 'Du kannst es kaum erwarten, das Baby zu sehen!'),
+      opt('Gemischte Gefühle', { luckDelta: 0 }, 'Es ist viel Veränderung auf einmal...'),
+      opt('Nicht begeistert', { luckDelta: -3, healthDelta: -2 }, 'Du magst es, Einzelkind zu sein.'),
+    ],
+  },
+  // Teen Lotto (underage gambling attempt)
+  {
+    id: createId(),
+    title: 'Lottoschein?',
+    text: 'Dein Freund hat einen älteren Bruder, der euch einen Lottoschein kaufen könnte...',
+    minAge: 14,
+    maxAge: 17,
+    category: 'social',
+    weight: 0.7,
+    tags: ['money', 'gambling', 'teen', 'lotto'],
+    options: [
+      opt('Versuchen (€5)', { moneyDelta: -5, luckDelta: -2 }, 'Der Bruder nimmt das Geld... und behält den Gewinn selbst.'),
+      opt('Zu riskant', { luckDelta: 3, iqDelta: 1 }, 'Kluge Entscheidung!'),
+    ],
+  },
 ];
 
 export const getEventsForAge = (events: GameEvent[], age: number): GameEvent[] => {
