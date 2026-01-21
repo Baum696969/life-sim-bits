@@ -41,6 +41,7 @@ export const generatePartner = (playerAge: number, playerLooks: number): Partner
     id: `partner-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     name,
     age,
+    gender: isMale ? 'male' : 'female',
     looks: Math.floor(looks),
     personality,
     compatibility: Math.min(100, Math.max(10, compatibility)),

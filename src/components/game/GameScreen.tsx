@@ -248,6 +248,52 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       agedPlayer = { ...agedPlayer, money: agedPlayer.money + 80 };
     }
     
+    // Add Kindergeld (€300 per child per year)
+    const kindergeldAmount = relationshipState.children.length * 300;
+    if (kindergeldAmount > 0) {
+      agedPlayer = { ...agedPlayer, money: agedPlayer.money + kindergeldAmount };
+      soundManager.playKindergeld();
+      toast.success(`Kindergeld erhalten: €${kindergeldAmount}!`);
+    }
+    
+    // Pay rent if renting
+    if (propertyState.rentedProperty) {
+      const yearlyRent = propertyState.rentedProperty.monthlyRent * 12;
+      agedPlayer = { ...agedPlayer, money: agedPlayer.money - yearlyRent };
+    }
+    
+    // Pay property maintenance (1% of property value per year)
+    const maintenanceCost = propertyState.ownedProperties.reduce((sum, p) => sum + Math.floor(p.purchasePrice * 0.01), 0);
+    if (maintenanceCost > 0) {
+      agedPlayer = { ...agedPlayer, money: agedPlayer.money - maintenanceCost };
+    }
+    
+    // Property appreciation
+    setPropertyState(prev => ({
+      ...prev,
+      ownedProperties: prev.ownedProperties.map(p => ({
+        ...p,
+        purchasePrice: Math.floor(p.purchasePrice * (1 + (p.appreciation || 0) / 100))
+      }))
+    }));
+    
+    // Handle pregnancy progression
+    if (pregnancyState.isPregnant) {
+      const newMonth = pregnancyState.pregnancyMonth + 12; // One year passes
+      if (newMonth >= 9) {
+        // Baby is born!
+        soundManager.playBabyBorn();
+        const babies = pregnancyState.babyGenders.map((gender, i) => ({
+          gender,
+          suggestedName: getSuggestedNames(gender, 3)[0]
+        }));
+        setPendingBabies(babies);
+        setShowBabyNamingModal(true);
+      } else {
+        setPregnancyState(prev => ({ ...prev, pregnancyMonth: newMonth }));
+      }
+    }
+    
     // Age family members and children
     setRelationshipState(prev => {
       const agedChildren = ageChildren(prev.children);
@@ -432,11 +478,20 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   };
 
   const handleTryForChild = () => {
+    // Check birth control
+    const playerOnPill = gameState.player.gender === 'female' && pregnancyState.playerOnBirthControl;
+    const partnerOnPill = relationshipState.partner?.gender === 'female' && pregnancyState.partnerOnBirthControl;
+    
+    if (playerOnPill || partnerOnPill) {
+      toast.info('Die Pille verhindert eine Schwangerschaft.');
+      return;
+    }
+    
     const chance = Math.random();
     if (chance < 0.4) {
       // Start pregnancy instead of immediate birth
       const pregnancy = generatePregnancy();
-      soundManager.playPositiveEffect();
+      soundManager.playPregnancyStart();
       setPregnancyState(prev => ({
         ...prev,
         isPregnant: true,
@@ -448,6 +503,54 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     } else {
       toast.info('Dieses Jahr hat es leider nicht geklappt.');
     }
+  };
+  
+  // Property handlers
+  const handleBuyProperty = (property: Property) => {
+    soundManager.playPropertyBuy();
+    setGameState(prev => ({
+      ...prev,
+      player: { ...prev.player, money: prev.player.money - property.purchasePrice }
+    }));
+    setPropertyState(prev => ({
+      ...prev,
+      ownedProperties: [...prev.ownedProperties, property],
+      currentHome: { ...property, owned: true }
+    }));
+  };
+
+  const handleRentProperty = (property: Property) => {
+    setPropertyState(prev => ({
+      ...prev,
+      rentedProperty: property,
+      currentHome: { ...property, owned: false }
+    }));
+  };
+
+  const handleSellProperty = (propertyId: string) => {
+    const property = propertyState.ownedProperties.find(p => p.id === propertyId);
+    if (property) {
+      const salePrice = Math.floor(property.purchasePrice * 0.9);
+      soundManager.playPropertySell();
+      setGameState(prev => ({
+        ...prev,
+        player: { ...prev.player, money: prev.player.money + salePrice }
+      }));
+      setPropertyState(prev => ({
+        ...prev,
+        ownedProperties: prev.ownedProperties.filter(p => p.id !== propertyId),
+        currentHome: prev.currentHome?.id === propertyId ? null : prev.currentHome
+      }));
+    }
+  };
+
+  const handleStopRenting = () => {
+    setPropertyState(prev => ({
+      ...prev,
+      rentedProperty: null,
+      currentHome: null
+    }));
+    toast.info('Mietvertrag gekündigt.');
   };
 
   const handleAdoptChild = (name: string, gender: 'male' | 'female', age: number) => {
@@ -671,6 +774,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onOpenRelationships={() => setShowRelationshipModal(true)}
         onOpenCrime={() => setShowCrimeModal(true)}
         onOpenCasino={goToCasino}
+        onOpenProperty={() => setShowPropertyModal(true)}
       />
 
       {/* Minigame Modal */}
@@ -732,6 +836,34 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onClose={() => setShowLottoModal(false)}
         onResult={handleLottoResult}
         playerMoney={gameState.player.money}
+      />
+
+      {/* Baby Naming Modal */}
+      <BabyNamingModal
+        isOpen={showBabyNamingModal}
+        onClose={() => setShowBabyNamingModal(false)}
+        babies={pendingBabies}
+        onConfirm={handleBabyBorn}
+      />
+
+      {/* Adoption Modal */}
+      <AdoptionModal
+        isOpen={showAdoptionModal}
+        onClose={() => setShowAdoptionModal(false)}
+        playerMoney={gameState.player.money}
+        onAdopt={handleAdoptChild}
+      />
+
+      {/* Property Modal */}
+      <PropertyModal
+        isOpen={showPropertyModal}
+        onClose={() => setShowPropertyModal(false)}
+        playerMoney={gameState.player.money}
+        propertyState={propertyState}
+        onBuyProperty={handleBuyProperty}
+        onRentProperty={handleRentProperty}
+        onSellProperty={handleSellProperty}
+        onStopRenting={handleStopRenting}
       />
     </div>
   );

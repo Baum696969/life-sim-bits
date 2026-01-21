@@ -56,9 +56,12 @@ export const generatePregnancy = (): { count: number; genders: ('male' | 'female
   return { count, genders };
 };
 
-// Get suggested names for babies
-export const getSuggestedNames = (genders: ('male' | 'female')[]): string[] => {
-  return genders.map(gender => {
+// Get suggested names for a single baby or array of genders
+export const getSuggestedNames = (genderOrGenders: ('male' | 'female') | ('male' | 'female')[], count?: number): string[] => {
+  const genders = Array.isArray(genderOrGenders) ? genderOrGenders : [genderOrGenders];
+  const numNames = count || genders.length;
+  
+  return genders.slice(0, numNames).map(gender => {
     const names = gender === 'male' ? boyNames : girlNames;
     return names[Math.floor(Math.random() * names.length)];
   });

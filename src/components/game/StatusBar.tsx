@@ -1,6 +1,6 @@
 import { Player } from '@/types/game';
 import { motion } from 'framer-motion';
-import { GraduationCap, Briefcase, DollarSign, Newspaper, Baby, Lock, Heart, Dices, Skull, Users, Gamepad2 } from 'lucide-react';
+import { GraduationCap, Briefcase, DollarSign, Newspaper, Baby, Lock, Heart, Dices, Skull, Users, Gamepad2, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -12,6 +12,7 @@ interface StatusBarProps {
   onOpenRelationships?: () => void;
   onOpenCrime?: () => void;
   onOpenCasino?: () => void;
+  onOpenProperty?: () => void;
 }
 
 const getSchoolGrade = (age: number, extraYears: number): string => {
@@ -87,7 +88,8 @@ const StatusBar = ({
   hasBabysitterJob,
   onOpenRelationships,
   onOpenCrime,
-  onOpenCasino
+  onOpenCasino,
+  onOpenProperty
 }: StatusBarProps) => {
   const isStudent = player.age >= 6 && player.age <= 16 + player.extraSchoolYears;
   const schoolGrade = getSchoolGrade(player.age, player.extraSchoolYears);
@@ -207,6 +209,16 @@ const StatusBar = ({
             currentAge={player.age}
             onClick={onOpenCasino}
             activeClass="border-yellow-500/50 hover:bg-yellow-500/20"
+          />
+
+          {/* Property - Age 18 */}
+          <FeatureButton
+            label="Immobilien"
+            icon={<Home className="h-3 w-3" />}
+            requiredAge={18}
+            currentAge={player.age}
+            onClick={onOpenProperty}
+            activeClass="border-amber-500/50 hover:bg-amber-500/20"
           />
 
           {/* Side Jobs for Students */}
