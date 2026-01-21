@@ -8,9 +8,12 @@ export interface PlayerStats {
   luck: number;
 }
 
+export type PlayerGender = 'male' | 'female';
+
 export interface Player {
   id: string;
   name: string;
+  gender: PlayerGender;
   birthYear: number;
   age: number;
   money: number;

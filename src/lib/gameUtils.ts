@@ -4,13 +4,14 @@ const generateId = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-export const createNewPlayer = (name: string): Player => {
+export const createNewPlayer = (name: string, gender: 'male' | 'female' = 'male'): Player => {
   const currentYear = new Date().getFullYear();
   const birthYear = currentYear;
   
   return {
     id: generateId(),
     name,
+    gender,
     birthYear,
     age: 0,
     money: 0,

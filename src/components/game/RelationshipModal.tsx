@@ -5,10 +5,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, Search, Users, Baby, CircleDot, HeartCrack, Sparkles, Home, Skull } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Heart, Search, Users, Baby, CircleDot, HeartCrack, Sparkles, Home, Pill, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Partner, Child, RelationshipState, FamilyMember, FamilyActivity, personalityDescriptions, familyActivities } from '@/types/relationship';
-import { generatePartnerOptions, canMarry, canHaveChildren, getAvailableActivities, doFamilyActivity } from '@/lib/relationshipSystem';
+import { PregnancyState } from '@/types/pregnancy';
+import { generatePartnerOptions, canMarry, getAvailableActivities } from '@/lib/relationshipSystem';
 import { Player } from '@/types/game';
 import { soundManager } from '@/lib/soundManager';
 import { toast } from 'sonner';
@@ -18,12 +20,16 @@ interface RelationshipModalProps {
   onClose: () => void;
   player: Player;
   relationshipState: RelationshipState;
+  pregnancyState: PregnancyState;
   onFindPartner: (partner: Partner) => void;
   onBreakup: () => void;
   onMarry: () => void;
   onDivorce: () => void;
   onTryForChild: () => void;
   onFamilyActivity?: (memberId: string, activity: FamilyActivity) => void;
+  onToggleBirthControl: () => void;
+  onAskPartnerBirthControl: () => void;
+  onOpenAdoption: () => void;
 }
 
 const RelationshipModal = ({
@@ -31,12 +37,16 @@ const RelationshipModal = ({
   onClose,
   player,
   relationshipState,
+  pregnancyState,
   onFindPartner,
   onBreakup,
   onMarry,
   onDivorce,
   onTryForChild,
-  onFamilyActivity
+  onFamilyActivity,
+  onToggleBirthControl,
+  onAskPartnerBirthControl,
+  onOpenAdoption
 }: RelationshipModalProps) => {
   const [view, setView] = useState<'main' | 'search'>('main');
   const [partnerOptions, setPartnerOptions] = useState<Partner[]>([]);
@@ -71,6 +81,22 @@ const RelationshipModal = ({
 
   const { partner, children, family } = relationshipState;
   const availableActivities = getAvailableActivities(player.age);
+
+  // Check if player can have children
+  const canHaveChildren = () => {
+    if (!partner || partner.relationshipStatus !== 'married') return false;
+    if (pregnancyState.isPregnant) return false;
+    
+    // Birth control check
+    if (player.gender === 'female') {
+      if (pregnancyState.playerOnBirthControl) return false;
+      if (player.age < 20 || player.age > 45) return false;
+    } else {
+      if (pregnancyState.partnerOnBirthControl) return false;
+      if (player.age < 20 || player.age > 50) return false;
+    }
+    return true;
+  };
 
   const renderFamilyMember = (member: FamilyMember, roleLabel: string) => (
     <Card 
@@ -223,6 +249,9 @@ const RelationshipModal = ({
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <Baby className="h-4 w-4" /> Deine Kinder ({children.length})
+                        <Badge variant="outline" className="ml-auto">
+                          +€{children.length * 300}/Jahr Kindergeld
+                        </Badge>
                       </h3>
                       <div className="grid gap-2">
                         {children.map(child => (
@@ -247,6 +276,17 @@ const RelationshipModal = ({
                       </div>
                     </div>
                   )}
+
+                  {/* Adoption Button */}
+                  {player.age >= 25 && partner?.relationshipStatus === 'married' && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => { onOpenAdoption(); onClose(); }}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" /> Kind adoptieren
+                    </Button>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -263,6 +303,24 @@ const RelationshipModal = ({
                   exit={{ opacity: 0, x: 20 }}
                   className="space-y-4"
                 >
+                  {/* Pregnancy Status */}
+                  {pregnancyState.isPregnant && (
+                    <Card className="bg-pink-500/10 border-pink-500/30">
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <span className="text-2xl">🤰</span>
+                        <div>
+                          <p className="font-medium text-pink-400">
+                            {player.gender === 'female' ? 'Du bist schwanger!' : 'Dein Partner ist schwanger!'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {pregnancyState.expectedBabies === 2 ? 'Zwillinge! ' : ''}
+                            Noch {9 - pregnancyState.pregnancyMonth} Monate bis zur Geburt
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* Current Partner Section */}
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -300,6 +358,46 @@ const RelationshipModal = ({
                           <p className="text-xs text-muted-foreground italic">
                             "{partner.meetingStory}"
                           </p>
+
+                          {/* Birth Control Section */}
+                          {partner.relationshipStatus === 'married' && (
+                            <Card className="bg-background/30 border-muted p-3">
+                              <div className="space-y-2">
+                                <h5 className="text-xs font-medium flex items-center gap-1">
+                                  <Pill className="h-3 w-3" /> Verhütung
+                                </h5>
+                                
+                                {player.gender === 'female' ? (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs">Pille nehmen</span>
+                                    <Switch
+                                      checked={pregnancyState.playerOnBirthControl}
+                                      onCheckedChange={onToggleBirthControl}
+                                      disabled={pregnancyState.isPregnant}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span>Partner nimmt Pille:</span>
+                                      <span>{pregnancyState.partnerOnBirthControl ? 'Ja' : 'Nein'}</span>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="w-full text-xs"
+                                      onClick={onAskPartnerBirthControl}
+                                      disabled={pregnancyState.isPregnant}
+                                    >
+                                      {pregnancyState.partnerOnBirthControl 
+                                        ? 'Bitten aufzuhören' 
+                                        : 'Bitten Pille zu nehmen'}
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </Card>
+                          )}
                           
                           <div className="flex flex-wrap gap-2 pt-2">
                             {partner.relationshipStatus === 'dating' && (
@@ -325,7 +423,7 @@ const RelationshipModal = ({
                             
                             {partner.relationshipStatus === 'married' && (
                               <>
-                                {canHaveChildren(partner, player.age) && (
+                                {canHaveChildren() && (
                                   <Button 
                                     size="sm"
                                     className="bg-blue-600 hover:bg-blue-700"
