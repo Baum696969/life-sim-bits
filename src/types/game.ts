@@ -138,7 +138,8 @@ export type MinigameType =
   | 'spaceshooter'
   | 'bottles'
   | 'english'
-  | 'german';
+  | 'german'
+  | 'timesense';
 
 export interface MinigameResult {
   type: MinigameType;

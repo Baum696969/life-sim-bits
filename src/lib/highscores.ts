@@ -69,6 +69,7 @@ export const getMinigameLabel = (type: MinigameType): string => {
     bottles: 'Flaschensammeln',
     english: 'Englisch-Test',
     german: 'Deutsch-Test',
+    timesense: 'Zeitgefühl',
   };
   return labels[type];
 };

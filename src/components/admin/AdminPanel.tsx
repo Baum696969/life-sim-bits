@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Lock, Unlock, Plus, Trash2, Save, X, ChevronDown, ChevronUp, Eye, EyeOff, Gamepad2, Play } from 'lucide-react';
+import { Shield, Lock, Unlock, Plus, Trash2, Save, X, ChevronDown, ChevronUp, Eye, EyeOff, Gamepad2, Play, BarChart3, Volume2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import MinigameModal from '@/components/game/MinigameModal';
+import { getAllMinigameStats, getAverageScore, getWinRate, formatLastPlayed, clearMinigameStats, recordMinigamePlay, getTotalPlays, getMostPlayedMinigame } from '@/lib/minigameStats';
+import { soundManager } from '@/lib/soundManager';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -24,10 +26,11 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'events' | 'minigames'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'minigames' | 'stats' | 'sounds'>('events');
   const [testingMinigame, setTestingMinigame] = useState<string | null>(null);
   const [testAge, setTestAge] = useState(25);
   const [lastTestResult, setLastTestResult] = useState<{ score: number; won: boolean; effects: any } | null>(null);
+  const [statsRefresh, setStatsRefresh] = useState(0);
   const { toast } = useToast();
 
   const [newEvent, setNewEvent] = useState({
@@ -268,6 +271,50 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
     { id: 'bottles', name: 'Flaschensammeln', emoji: '🍾', description: 'Sammle Flaschen für €0,25 pro Stück' },
     { id: 'english', name: 'Englisch-Test', emoji: '🇬🇧', description: 'Übersetze Wörter ins Englische' },
     { id: 'german', name: 'Deutsch-Test', emoji: '📝', description: 'Grammatik und Rechtschreibung' },
+    { id: 'timesense', name: 'Zeitgefühl', emoji: '⏱️', description: 'Stoppe genau nach X Sekunden ohne Uhr' },
+  ];
+
+  // Sound effects list for testing
+  const soundEffects = [
+    { id: 'click', name: 'Click', fn: () => soundManager.playClick() },
+    { id: 'hover', name: 'Hover', fn: () => soundManager.playHover() },
+    { id: 'buttonPress', name: 'Button Press', fn: () => soundManager.playButtonPress() },
+    { id: 'toggle', name: 'Toggle', fn: () => soundManager.playToggle() },
+    { id: 'positiveEffect', name: 'Positiver Effekt', fn: () => soundManager.playPositiveEffect() },
+    { id: 'negativeEffect', name: 'Negativer Effekt', fn: () => soundManager.playNegativeEffect() },
+    { id: 'levelUp', name: 'Level Up', fn: () => soundManager.playLevelUp() },
+    { id: 'gameOver', name: 'Game Over', fn: () => soundManager.playGameOver() },
+    { id: 'newYear', name: 'Neues Jahr', fn: () => soundManager.playNewYear() },
+    { id: 'minigameStart', name: 'Minigame Start', fn: () => soundManager.playMinigameStart() },
+    { id: 'minigameWin', name: 'Minigame Gewonnen', fn: () => soundManager.playMinigameWin() },
+    { id: 'minigameLose', name: 'Minigame Verloren', fn: () => soundManager.playMinigameLose() },
+    { id: 'coins', name: 'Münzen', fn: () => soundManager.playCoins() },
+    { id: 'cardFlip', name: 'Karte umdrehen', fn: () => soundManager.playCardFlip() },
+    { id: 'match', name: 'Match', fn: () => soundManager.playMatch() },
+    { id: 'schoolBell', name: 'Schulglocke', fn: () => soundManager.playSchoolBell() },
+    { id: 'jobPromotion', name: 'Job Beförderung', fn: () => soundManager.playJobPromotion() },
+    { id: 'crimeSuccess', name: 'Verbrechen Erfolg', fn: () => soundManager.playCrimeSuccess() },
+    { id: 'crimeFail', name: 'Verbrechen Fehlschlag', fn: () => soundManager.playCrimeFail() },
+    { id: 'prisonDoor', name: 'Gefängnistür', fn: () => soundManager.playPrisonDoor() },
+    { id: 'bottleCollect', name: 'Flasche sammeln', fn: () => soundManager.playBottleCollect() },
+    { id: 'shoot', name: 'Schuss', fn: () => soundManager.playShoot() },
+    { id: 'explosion', name: 'Explosion', fn: () => soundManager.playExplosion() },
+    { id: 'hit', name: 'Treffer', fn: () => soundManager.playHit() },
+    { id: 'healthUp', name: 'Gesundheit +', fn: () => soundManager.playHealthUp() },
+    { id: 'healthDown', name: 'Gesundheit -', fn: () => soundManager.playHealthDown() },
+    { id: 'ageUp', name: 'Älter werden', fn: () => soundManager.playAgeUp() },
+    { id: 'correctAnswer', name: 'Richtige Antwort', fn: () => soundManager.playCorrectAnswer() },
+    { id: 'wrongAnswer', name: 'Falsche Antwort', fn: () => soundManager.playWrongAnswer() },
+    { id: 'eventAppear', name: 'Event erscheint', fn: () => soundManager.playEventAppear() },
+    { id: 'lottoWin', name: 'Lotto Gewinn', fn: () => soundManager.playLottoWin() },
+    { id: 'lottoLose', name: 'Lotto Verlust', fn: () => soundManager.playLottoLose() },
+    { id: 'newSibling', name: 'Neues Geschwister', fn: () => soundManager.playNewSibling() },
+    { id: 'optionSelect', name: 'Option wählen', fn: () => soundManager.playOptionSelect() },
+    { id: 'babyBorn', name: 'Baby geboren', fn: () => soundManager.playBabyBorn() },
+    { id: 'pregnancyStart', name: 'Schwangerschaft', fn: () => soundManager.playPregnancyStart() },
+    { id: 'propertyBuy', name: 'Immobilie kaufen', fn: () => soundManager.playPropertyBuy() },
+    { id: 'propertySell', name: 'Immobilie verkaufen', fn: () => soundManager.playPropertySell() },
+    { id: 'kindergeld', name: 'Kindergeld', fn: () => soundManager.playKindergeld() },
   ];
 
   const handleMinigameTest = (minigameId: string) => {
@@ -276,6 +323,11 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
   };
 
   const handleMinigameComplete = (result: { score: number; won: boolean; effects: any }) => {
+    // Record stats for the minigame
+    if (testingMinigame) {
+      recordMinigamePlay(testingMinigame, result.score, result.won);
+      setStatsRefresh(prev => prev + 1);
+    }
     setLastTestResult(result);
     setTestingMinigame(null);
     toast({
@@ -313,10 +365,12 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
             </motion.div>
           ) : (
             <motion.div key="panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'events' | 'minigames')}>
-                <TabsList className="grid w-full grid-cols-2">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'events' | 'minigames' | 'stats' | 'sounds')}>
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="events">📋 Events</TabsTrigger>
-                  <TabsTrigger value="minigames">🎮 Minigames testen</TabsTrigger>
+                  <TabsTrigger value="minigames">🎮 Testen</TabsTrigger>
+                  <TabsTrigger value="stats">📊 Statistik</TabsTrigger>
+                  <TabsTrigger value="sounds">🔊 Sounds</TabsTrigger>
                 </TabsList>
 
                 {/* Events Tab */}
@@ -560,6 +614,133 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
                             <Play className="h-3 w-3 mr-1" /> Starten
                           </Button>
                         </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Statistics Tab */}
+                <TabsContent value="stats" className="space-y-4">
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <BarChart3 className="h-6 w-6 text-primary" />
+                        <h3 className="font-display text-lg text-primary">Minigame Statistiken</h3>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setStatsRefresh(prev => prev + 1)}>
+                          <RefreshCw className="h-4 w-4 mr-1" /> Aktualisieren
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => { clearMinigameStats(); setStatsRefresh(prev => prev + 1); }}>
+                          <Trash2 className="h-4 w-4 mr-1" /> Zurücksetzen
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Overview */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                      <div className="bg-background/50 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-display text-primary">{getTotalPlays()}</p>
+                        <p className="text-xs text-muted-foreground">Gesamt gespielt</p>
+                      </div>
+                      <div className="bg-background/50 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-display text-primary">{Object.keys(getAllMinigameStats()).length}</p>
+                        <p className="text-xs text-muted-foreground">Verschiedene Spiele</p>
+                      </div>
+                      <div className="bg-background/50 rounded-lg p-3 text-center col-span-2">
+                        {(() => {
+                          const mostPlayed = getMostPlayedMinigame();
+                          const game = mostPlayed ? allMinigames.find(g => g.id === mostPlayed.id) : null;
+                          return (
+                            <>
+                              <p className="text-lg font-display text-primary">{game ? `${game.emoji} ${game.name}` : '-'}</p>
+                              <p className="text-xs text-muted-foreground">Meist gespielt {mostPlayed ? `(${mostPlayed.count}x)` : ''}</p>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Per-game stats */}
+                    <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                      {allMinigames.map((game) => {
+                        const stats = getAllMinigameStats()[game.id];
+                        if (!stats) return (
+                          <div key={game.id} className="bg-background/30 rounded-lg p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">{game.emoji}</span>
+                              <span className="font-medium">{game.name}</span>
+                            </div>
+                            <span className="text-sm text-muted-foreground">Noch nicht gespielt</span>
+                          </div>
+                        );
+                        return (
+                          <div key={game.id} className="bg-background/50 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <span className="text-2xl">{game.emoji}</span>
+                                <span className="font-medium">{game.name}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">{formatLastPlayed(stats.lastPlayed)}</span>
+                            </div>
+                            <div className="grid grid-cols-5 gap-2 text-center text-sm">
+                              <div>
+                                <p className="font-medium text-primary">{stats.playCount}</p>
+                                <p className="text-xs text-muted-foreground">Gespielt</p>
+                              </div>
+                              <div>
+                                <p className="font-medium text-success">{stats.wins}</p>
+                                <p className="text-xs text-muted-foreground">Siege</p>
+                              </div>
+                              <div>
+                                <p className="font-medium text-destructive">{stats.losses}</p>
+                                <p className="text-xs text-muted-foreground">Niederlagen</p>
+                              </div>
+                              <div>
+                                <p className="font-medium">{getWinRate(game.id)}%</p>
+                                <p className="text-xs text-muted-foreground">Winrate</p>
+                              </div>
+                              <div>
+                                <p className="font-medium">{getAverageScore(game.id)}</p>
+                                <p className="text-xs text-muted-foreground">Ø Score</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 pt-2 border-t border-border/50 flex justify-between text-xs text-muted-foreground">
+                              <span>Highscore: {stats.highScore}</span>
+                              <span>Lowscore: {stats.lowScore === Infinity ? '-' : stats.lowScore}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Sound Tester Tab */}
+                <TabsContent value="sounds" className="space-y-4">
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <div className="flex items-center gap-4 mb-4">
+                      <Volume2 className="h-6 w-6 text-primary" />
+                      <h3 className="font-display text-lg text-primary">Sound-Effekte Tester</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Klicke auf einen Sound, um ihn abzuspielen. {soundManager.isEnabled() ? '🔊 Sounds sind aktiviert' : '🔇 Sounds sind deaktiviert'}
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {soundEffects.map((sound) => (
+                        <Button
+                          key={sound.id}
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-left justify-start"
+                          onClick={() => {
+                            sound.fn();
+                            toast({ title: `🔊 ${sound.name}`, description: 'Sound abgespielt' });
+                          }}
+                        >
+                          <Volume2 className="h-3 w-3 mr-2 flex-shrink-0" />
+                          <span className="truncate">{sound.name}</span>
+                        </Button>
                       ))}
                     </div>
                   </div>

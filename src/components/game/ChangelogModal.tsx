@@ -16,6 +16,27 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '0.9',
+    date: '21. Januar 2025',
+    title: 'Admin Tools & Zeitgefühl',
+    highlights: [
+      'Neues Minigame: Zeitgefühl',
+      'Minigame-Statistiken',
+      'Sound-Tester im Admin',
+      'Erweiterte Admin-Tools',
+    ],
+    details: [
+      'Zeitgefühl: Stoppe genau nach X Sekunden ohne Uhr',
+      '5 Level mit steigender Schwierigkeit',
+      'Perfect-Streak Bonus-System',
+      'Admin Panel: Statistik-Tab mit Spielzahlen',
+      'Durchschnittliche Scores und Winrates',
+      'Highscore und Lowscore pro Minigame',
+      'Admin Panel: Sound-Tester für alle 30+ Effekte',
+      'Minigame-Statistiken werden gespeichert',
+    ],
+  },
+  {
     version: '0.8',
     date: '21. Januar 2025',
     title: 'Aktivitäten & Casino Update',
