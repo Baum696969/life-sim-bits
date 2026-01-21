@@ -8,9 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Heart, Search, Users, Baby, CircleDot, HeartCrack, Sparkles, Home, Pill, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Partner, Child, RelationshipState, FamilyMember, FamilyActivity, personalityDescriptions, familyActivities } from '@/types/relationship';
+import { Partner, Child, RelationshipState, FamilyMember, FamilyActivity, FriendActivity, Friend, personalityDescriptions, familyActivities, friendActivities, personalityLabels } from '@/types/relationship';
 import { PregnancyState } from '@/types/pregnancy';
-import { generatePartnerOptions, canMarry, getAvailableActivities } from '@/lib/relationshipSystem';
+import { generatePartnerOptions, canMarry, getAvailableActivities, canDoActivity } from '@/lib/relationshipSystem';
 import { Player } from '@/types/game';
 import { soundManager } from '@/lib/soundManager';
 import { toast } from 'sonner';
@@ -27,6 +27,7 @@ interface RelationshipModalProps {
   onDivorce: () => void;
   onTryForChild: () => void;
   onFamilyActivity?: (memberId: string, activity: FamilyActivity) => void;
+  onFriendActivity?: (friendId: string, activity: FriendActivity) => void;
   onToggleBirthControl: () => void;
   onAskPartnerBirthControl: () => void;
   onOpenAdoption: () => void;
@@ -44,6 +45,7 @@ const RelationshipModal = ({
   onDivorce,
   onTryForChild,
   onFamilyActivity,
+  onFriendActivity,
   onToggleBirthControl,
   onAskPartnerBirthControl,
   onOpenAdoption

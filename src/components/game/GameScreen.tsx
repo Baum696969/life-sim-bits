@@ -25,9 +25,10 @@ import { PropertyState, createPropertyState, Property, calculateYearlyRent } fro
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, addSibling } from '@/lib/relationshipSystem';
+import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, addSibling, resetYearlyActivityUsage, canDoActivity, recordActivityUsage, getRandomExcuse, generateInitialFriends } from '@/lib/relationshipSystem';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { FriendActivity, friendActivities } from '@/types/relationship';
 
 interface GameScreenProps {
   initialState: GameState;
@@ -294,7 +295,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       }
     }
     
-    // Age family members and children
+    // Age family members and children, reset yearly activity usage
     setRelationshipState(prev => {
       const agedChildren = ageChildren(prev.children);
       const agedFamily = prev.family ? ageFamily(prev.family) : null;
@@ -319,12 +320,17 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         };
       }
       
-      return {
+      // Age friends
+      const agedFriends = prev.friends.map(f => ({ ...f, age: f.age + 1 }));
+      
+      // Reset yearly activity usage for new year
+      return resetYearlyActivityUsage({
         ...prev,
         partner: agedPartner,
         children: agedChildren,
-        family: agedFamily
-      };
+        family: agedFamily,
+        friends: agedFriends
+      });
     });
     
     // Check if health is 0 or below
@@ -604,29 +610,103 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   };
 
   const handleFamilyActivity = (memberId: string, activity: FamilyActivity) => {
-    if (gameState.player.money < activity.cost) {
+    // Check yearly limit
+    if (!canDoActivity(activity.id, activity.maxPerYear, relationshipState.yearlyActivityUsage)) {
+      const excuse = getRandomExcuse(activity.excuses);
+      toast.info(`"${excuse}"`);
+      return;
+    }
+    
+    // Check cost - parents pay until 18
+    const parentsPay = gameState.player.age < 18 && relationshipState.family?.father.isAlive;
+    const effectiveCost = parentsPay ? 0 : activity.cost;
+    
+    if (gameState.player.money < effectiveCost) {
       toast.error(`Nicht genug Geld! Du brauchst €${activity.cost}`);
       return;
     }
     
-    // Deduct cost
+    // Deduct cost (or not if parents pay)
+    if (effectiveCost > 0) {
+      setGameState(prev => ({
+        ...prev,
+        player: { 
+          ...prev.player, 
+          money: prev.player.money - effectiveCost,
+          stats: {
+            ...prev.player.stats,
+            health: Math.min(100, prev.player.stats.health + (activity.effects.healthDelta || 0))
+          }
+        }
+      }));
+    } else if (activity.effects.healthDelta) {
+      setGameState(prev => ({
+        ...prev,
+        player: { 
+          ...prev.player, 
+          stats: {
+            ...prev.player.stats,
+            health: Math.min(100, prev.player.stats.health + activity.effects.healthDelta)
+          }
+        }
+      }));
+    }
+    
+    // Update family relationship and record usage
+    setRelationshipState(prev => ({
+      ...prev,
+      family: prev.family ? doFamilyActivity(prev.family, memberId, activity) : null,
+      yearlyActivityUsage: recordActivityUsage(activity.id, prev.yearlyActivityUsage)
+    }));
+    
+    if (parentsPay && activity.cost > 0) {
+      toast.success(`${activity.emoji} Eltern haben €${activity.cost} bezahlt!`);
+    }
+  };
+
+  const handleFriendActivity = (friendId: string, activity: FriendActivity) => {
+    // Check yearly limit
+    if (!canDoActivity(activity.id, activity.maxPerYear, relationshipState.yearlyFriendActivityUsage)) {
+      toast.info('Das habt ihr dieses Jahr schon oft genug gemacht!');
+      return;
+    }
+    
+    // Check cost - parents pay until 18 for some activities
+    const parentsPay = gameState.player.age < 18 && relationshipState.family?.father.isAlive;
+    const effectiveCost = parentsPay ? 0 : activity.cost;
+    
+    if (gameState.player.money < effectiveCost) {
+      toast.error(`Nicht genug Geld! Du brauchst €${activity.cost}`);
+      return;
+    }
+    
+    // Deduct cost and apply effects
     setGameState(prev => ({
       ...prev,
       player: { 
         ...prev.player, 
-        money: prev.player.money - activity.cost,
+        money: prev.player.money - effectiveCost,
         stats: {
           ...prev.player.stats,
-          health: Math.min(100, prev.player.stats.health + (activity.effects.healthDelta || 0))
+          health: Math.min(100, prev.player.stats.health + (activity.effects.healthDelta || 0)),
+          fitness: Math.min(100, prev.player.stats.fitness + (activity.effects.fitnessDelta || 0))
         }
       }
     }));
     
-    // Update family relationship
+    // Update friend relationship and record usage
     setRelationshipState(prev => ({
       ...prev,
-      family: prev.family ? doFamilyActivity(prev.family, memberId, activity) : null
+      friends: prev.friends.map(f => 
+        f.id === friendId 
+          ? { ...f, friendship: Math.min(100, f.friendship + activity.effects.friendshipBonus) }
+          : f
+      ),
+      yearlyFriendActivityUsage: recordActivityUsage(activity.id, prev.yearlyFriendActivityUsage)
     }));
+    
+    const friend = relationshipState.friends.find(f => f.id === friendId);
+    toast.success(`${activity.emoji} ${activity.name} mit ${friend?.name}! +${activity.effects.friendshipBonus} Freundschaft`);
   };
 
   const goToCasino = () => {
@@ -817,6 +897,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onDivorce={handleDivorce}
         onTryForChild={handleTryForChild}
         onFamilyActivity={handleFamilyActivity}
+        onFriendActivity={handleFriendActivity}
         onToggleBirthControl={() => setPregnancyState(prev => ({ ...prev, playerOnBirthControl: !prev.playerOnBirthControl }))}
         onAskPartnerBirthControl={() => {
           const willChange = Math.random() > 0.3;
