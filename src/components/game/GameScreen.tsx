@@ -15,8 +15,8 @@ import StatusBar from './StatusBar';
 import JobModal from './JobModal';
 import CrimeModal, { CrimeResult } from './CrimeModal';
 import RelationshipModal from './RelationshipModal';
-import { RelationshipState, Partner } from '@/types/relationship';
-import { createRelationshipState, generateChild, ageChildren } from '@/lib/relationshipSystem';
+import { RelationshipState, Partner, FamilyActivity } from '@/types/relationship';
+import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, generateFamily } from '@/lib/relationshipSystem';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,7 +43,9 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const [showCrimeModal, setShowCrimeModal] = useState(false);
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [hasBabysitterJob, setHasBabysitterJob] = useState(false);
-  const [relationshipState, setRelationshipState] = useState<RelationshipState>(createRelationshipState());
+  const [relationshipState, setRelationshipState] = useState<RelationshipState>(() => 
+    createRelationshipState(initialState.player.birthYear)
+  );
 
   // Start ambient music on mount
   useEffect(() => {
@@ -182,6 +184,39 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     if (hasBabysitterJob) {
       agedPlayer = { ...agedPlayer, money: agedPlayer.money + 80 };
     }
+    
+    // Age family members and children
+    setRelationshipState(prev => {
+      const agedChildren = ageChildren(prev.children);
+      const agedFamily = prev.family ? ageFamily(prev.family) : null;
+      
+      // Check for parent death notifications
+      if (prev.family && agedFamily) {
+        if (prev.family.mother.isAlive && !agedFamily.mother.isAlive) {
+          toast.error(`Deine Mutter ${prev.family.mother.name} ist verstorben. 😢`);
+        }
+        if (prev.family.father.isAlive && !agedFamily.father.isAlive) {
+          toast.error(`Dein Vater ${prev.family.father.name} ist verstorben. 😢`);
+        }
+      }
+      
+      // Age partner
+      let agedPartner = prev.partner;
+      if (agedPartner) {
+        agedPartner = {
+          ...agedPartner,
+          age: agedPartner.age + 1,
+          yearsTogethere: agedPartner.yearsTogethere + 1
+        };
+      }
+      
+      return {
+        ...prev,
+        partner: agedPartner,
+        children: agedChildren,
+        family: agedFamily
+      };
+    });
     
     // Check if health is 0 or below
     const isDead = agedPlayer.stats.health <= 0 || !agedPlayer.isAlive;
@@ -346,6 +381,32 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     } else {
       toast.info('Dieses Jahr hat es leider nicht geklappt.');
     }
+  };
+
+  const handleFamilyActivity = (memberId: string, activity: FamilyActivity) => {
+    if (gameState.player.money < activity.cost) {
+      toast.error(`Nicht genug Geld! Du brauchst €${activity.cost}`);
+      return;
+    }
+    
+    // Deduct cost
+    setGameState(prev => ({
+      ...prev,
+      player: { 
+        ...prev.player, 
+        money: prev.player.money - activity.cost,
+        stats: {
+          ...prev.player.stats,
+          health: Math.min(100, prev.player.stats.health + (activity.effects.healthDelta || 0))
+        }
+      }
+    }));
+    
+    // Update family relationship
+    setRelationshipState(prev => ({
+      ...prev,
+      family: prev.family ? doFamilyActivity(prev.family, memberId, activity) : null
+    }));
   };
 
   const goToCasino = () => {
@@ -533,6 +594,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onMarry={handleMarry}
         onDivorce={handleDivorce}
         onTryForChild={handleTryForChild}
+        onFamilyActivity={handleFamilyActivity}
       />
     </div>
   );
