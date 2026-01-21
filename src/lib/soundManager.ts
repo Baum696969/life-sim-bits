@@ -330,6 +330,43 @@ class SoundManager {
     setTimeout(() => this.createOscillatorSound(900, 0.08, 'sine', 0.08), 100);
   }
 
+  playLottoWin(): void {
+    if (!this.enabled) return;
+    // JACKPOT! Epic celebration
+    const notes = [523, 659, 784, 1047, 1319, 1568];
+    notes.forEach((freq, i) => {
+      setTimeout(() => {
+        this.createOscillatorSound(freq, 0.2, 'sine', 0.25);
+        this.createOscillatorSound(freq * 0.5, 0.2, 'triangle', 0.15);
+        this.createOscillatorSound(freq * 1.5, 0.15, 'sine', 0.1);
+      }, i * 100);
+    });
+    // Cash register sound at the end
+    setTimeout(() => {
+      this.createOscillatorSound(2000, 0.05, 'sine', 0.2);
+      this.createOscillatorSound(2500, 0.04, 'sine', 0.15);
+    }, 700);
+  }
+
+  playLottoLose(): void {
+    if (!this.enabled) return;
+    // Disappointing "womp womp"
+    this.createOscillatorSound(349, 0.2, 'triangle', 0.12);
+    setTimeout(() => this.createOscillatorSound(233, 0.4, 'triangle', 0.1), 200);
+  }
+
+  playNewSibling(): void {
+    if (!this.enabled) return;
+    // Baby cry + celebration
+    this.createOscillatorSound(600, 0.1, 'sine', 0.15);
+    setTimeout(() => this.createOscillatorSound(800, 0.08, 'sine', 0.12), 80);
+    setTimeout(() => this.createOscillatorSound(600, 0.1, 'sine', 0.1), 160);
+    setTimeout(() => {
+      // Little celebration
+      this.createChord([523, 659, 784], 0.2, 'sine', 0.12);
+    }, 300);
+  }
+
   playOptionSelect(): void {
     if (!this.enabled) return;
     this.createOscillatorSound(523, 0.04, 'sine', 0.12);

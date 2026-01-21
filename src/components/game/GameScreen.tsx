@@ -15,8 +15,9 @@ import StatusBar from './StatusBar';
 import JobModal from './JobModal';
 import CrimeModal, { CrimeResult } from './CrimeModal';
 import RelationshipModal from './RelationshipModal';
+import LottoModal from './LottoModal';
 import { RelationshipState, Partner, FamilyActivity } from '@/types/relationship';
-import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, generateFamily } from '@/lib/relationshipSystem';
+import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, generateFamily, addSibling } from '@/lib/relationshipSystem';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,10 +39,11 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const [currentMinigame, setCurrentMinigame] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
   
-  // Job, Crime, and Relationship modals
+  // Job, Crime, Relationship, and Lotto modals
   const [showJobModal, setShowJobModal] = useState(false);
   const [showCrimeModal, setShowCrimeModal] = useState(false);
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
+  const [showLottoModal, setShowLottoModal] = useState(false);
   const [hasBabysitterJob, setHasBabysitterJob] = useState(false);
   const [relationshipState, setRelationshipState] = useState<RelationshipState>(() => 
     createRelationshipState(initialState.player.birthYear)
@@ -114,12 +116,62 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     soundManager.playClick();
     setSelectedOption(option);
 
+    // Check for special event tags
+    const currentEvent = gameState.currentEvent;
+    const isLottoEvent = currentEvent?.tags?.includes('lotto') && option.label.includes('kaufen');
+    const isAddSiblingEvent = currentEvent?.tags?.includes('add_sibling');
+
     if (option.minigame) {
       soundManager.playMinigameStart();
       setCurrentMinigame(option.minigame);
       setShowMinigame(true);
+    } else if (isLottoEvent && gameState.player.age >= 18) {
+      // Open Lotto modal for adult players
+      setShowLottoModal(true);
     } else {
       applyOptionEffects(option);
+      
+      // Handle adding new sibling
+      if (isAddSiblingEvent && option.label.includes('freu')) {
+        handleAddSibling();
+      }
+    }
+  };
+
+  const handleAddSibling = () => {
+    if (relationshipState.family) {
+      soundManager.playNewSibling();
+      const newFamily = addSibling(relationshipState.family);
+      const newSibling = newFamily.siblings[newFamily.siblings.length - 1];
+      toast.success(`Dein neues Geschwisterchen ${newSibling.name} ist geboren! 👶`);
+      setRelationshipState(prev => ({
+        ...prev,
+        family: newFamily
+      }));
+    }
+  };
+
+  const handleLottoResult = (won: boolean, amount: number) => {
+    setShowLottoModal(false);
+    
+    // Apply the lotto result
+    if (won) {
+      toast.success(`JACKPOT! Du hast €10.000 gewonnen! 🎉🎰`);
+    } else {
+      toast.info('Leider kein Gewinn. Vielleicht nächstes Mal!');
+    }
+    
+    setGameState(prev => ({
+      ...prev,
+      player: {
+        ...prev.player,
+        money: prev.player.money + amount
+      }
+    }));
+    
+    // Continue with the event result
+    if (selectedOption) {
+      setShowResult(true);
     }
   };
 
@@ -595,6 +647,14 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onDivorce={handleDivorce}
         onTryForChild={handleTryForChild}
         onFamilyActivity={handleFamilyActivity}
+      />
+
+      {/* Lotto Modal */}
+      <LottoModal
+        isOpen={showLottoModal}
+        onClose={() => setShowLottoModal(false)}
+        onResult={handleLottoResult}
+        playerMoney={gameState.player.money}
       />
     </div>
   );
