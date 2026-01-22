@@ -38,6 +38,7 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
   const birdRef = useRef({ y: 200, velocity: 0 });
   const pipesRef = useRef<{ x: number; topHeight: number; passed: boolean }[]>([]);
   const frameRef = useRef<number>();
+  const lastFrameTimeRef = useRef<number | null>(null);
   const scoreRef = useRef(0);
   const livesRef = useRef(MAX_LIVES);
   const gameStartedRef = useRef(false);
@@ -159,15 +160,21 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
 
     const { width, height } = canvasSize;
 
-    const gameLoop = () => {
+    const gameLoop = (ts: number) => {
       if (gameState !== 'playing' && gameState !== 'hit') return;
+
+      // Delta-time scaling (normalize to ~60fps)
+      const last = lastFrameTimeRef.current ?? ts;
+      const dtMs = ts - last;
+      lastFrameTimeRef.current = ts;
+      const dtFactor = Math.min(3, Math.max(0.5, dtMs / (1000 / 60)));
 
       const { gravity, pipeSpeed } = getDynamicValues(scoreRef.current);
 
       // Apply gravity but limit fall speed
-      birdRef.current.velocity += gravity;
+      birdRef.current.velocity += gravity * dtFactor;
       birdRef.current.velocity = Math.min(birdRef.current.velocity, MAX_FALL_SPEED);
-      birdRef.current.y += birdRef.current.velocity;
+      birdRef.current.y += birdRef.current.velocity * dtFactor;
 
       // Spawn pipes with more space between them
       if (pipesRef.current.length === 0 || pipesRef.current[pipesRef.current.length - 1].x < width - 250) {
@@ -177,7 +184,7 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
 
       pipesRef.current = pipesRef.current.filter(pipe => pipe.x > -PIPE_WIDTH);
       pipesRef.current.forEach(pipe => {
-        pipe.x -= pipeSpeed;
+        pipe.x -= pipeSpeed * dtFactor;
         
         if (!pipe.passed && pipe.x + PIPE_WIDTH < 50) {
           pipe.passed = true;
@@ -241,6 +248,7 @@ const FlappyBird = ({ onComplete }: FlappyBirdProps) => {
     };
 
     if (gameState === 'playing' || gameState === 'hit') {
+      lastFrameTimeRef.current = null;
       frameRef.current = requestAnimationFrame(gameLoop);
     }
 
