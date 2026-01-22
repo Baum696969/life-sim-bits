@@ -75,6 +75,7 @@ export const getMinigameLabel = (type: MinigameType): string => {
     fastfood: 'Fast Food Praktikum',
     warehouse: 'Lager Praktikum',
     office: 'Büro Praktikum',
+    bankheist: 'Banküberfall',
   };
   return labels[type];
 };

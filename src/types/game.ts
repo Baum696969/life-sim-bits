@@ -144,7 +144,8 @@ export type MinigameType =
   | 'stealth'
   | 'fastfood'
   | 'warehouse'
-  | 'office';
+  | 'office'
+  | 'bankheist';
 
 // Internship tracking
 export interface InternshipRecord {

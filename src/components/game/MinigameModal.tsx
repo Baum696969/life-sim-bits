@@ -18,6 +18,7 @@ import StealthGame from '../minigames/StealthGame';
 import FastFoodGame from '../minigames/FastFoodGame';
 import WarehouseGame from '../minigames/WarehouseGame';
 import OfficeGame from '../minigames/OfficeGame';
+import BankHeist from '../minigames/BankHeist';
 
 interface MinigameModalProps {
   isOpen: boolean;
@@ -66,6 +67,8 @@ const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney, pla
         return <WarehouseGame onComplete={onComplete} />;
       case 'office':
         return <OfficeGame onComplete={onComplete} />;
+      case 'bankheist':
+        return <BankHeist onComplete={onComplete} />;
       default:
         return <div className="text-center p-8">Minigame nicht gefunden</div>;
     }
