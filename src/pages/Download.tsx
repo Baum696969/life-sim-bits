@@ -108,6 +108,34 @@ const Download = () => {
               <span className="text-foreground"> /download</span>
             </p>
           </Card>
+
+          <Card className="p-6 card-glow">
+            <h2 className="font-display text-xl text-foreground">Android APK (Capacitor)</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Eine echte APK kann hier im Editor nicht gebaut werden – aber Capacitor ist jetzt vorbereitet.
+              Sobald du die APK gebaut hast, lege sie unter
+              <span className="text-foreground"> public/downloads/gitlife.apk</span> ab,
+              dann ist der Download-Link live.
+            </p>
+
+            <div className="mt-5 flex flex-col sm:flex-row gap-3">
+              <a href="/downloads/gitlife.apk" className="inline-flex">
+                <Button className="game-btn w-full">
+                  <DownloadIcon className="mr-2 h-4 w-4" /> APK herunterladen
+                </Button>
+              </a>
+              <a
+                href="https://developer.android.com/studio"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex"
+              >
+                <Button variant="outline" className="w-full">
+                  Android Studio <ExternalLink className="ml-2 h-4 w-4" />
+                </Button>
+              </a>
+            </div>
+          </Card>
         </motion.section>
       </div>
     </main>
