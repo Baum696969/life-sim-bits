@@ -1,0 +1,10 @@
+{
+  "releases": [
+    {
+      "version": "1.0.0",
+      "file": "gitlife-v1.0.0.apk",
+      "publishedAt": "2026-01-22",
+      "notes": "Erstes Android-Release."
+    }
+  ]
+}
