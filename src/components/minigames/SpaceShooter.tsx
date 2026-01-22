@@ -41,6 +41,8 @@ const SpaceShooter = ({ onComplete }: SpaceShooterProps) => {
   const bulletIdRef = useRef(0);
   const enemyIdRef = useRef(0);
   const touchRef = useRef<{ x: number; shooting: boolean }>({ x: 150, shooting: false });
+  const frameTimeRef = useRef<number | null>(null);
+  const tapControlsRef = useRef<{ left: boolean; right: boolean; shoot: boolean }>({ left: false, right: false, shoot: false });
 
   const startGame = () => {
     setGameState('countdown');
@@ -135,8 +137,14 @@ const SpaceShooter = ({ onComplete }: SpaceShooterProps) => {
 
     let animationId: number;
     
-    const gameLoop = () => {
+    const gameLoop = (ts: number) => {
       if (gameOverRef.current) return;
+
+      // Delta-time scaling (normalize to ~60fps)
+      const last = frameTimeRef.current ?? ts;
+      const dtMs = ts - last;
+      frameTimeRef.current = ts;
+      const dtFactor = Math.min(3, Math.max(0.5, dtMs / (1000 / 60)));
 
       // Clear
       ctx.fillStyle = '#0a0a0a';
@@ -146,18 +154,19 @@ const SpaceShooter = ({ onComplete }: SpaceShooterProps) => {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
       for (let i = 0; i < 30; i++) {
         ctx.fillRect(
-          (Date.now() / 50 + i * 100) % 300,
+          (ts / 50 + i * 100) % 300,
           (i * 37) % 320,
           1, 1
         );
       }
 
       // Move player
-      const speed = 5;
-      if (keysRef.current['ArrowLeft'] || keysRef.current['a']) {
+      const speed = 5 * dtFactor;
+      const tap = tapControlsRef.current;
+      if (keysRef.current['ArrowLeft'] || keysRef.current['a'] || tap.left) {
         playerRef.current.x = Math.max(15, playerRef.current.x - speed);
       }
-      if (keysRef.current['ArrowRight'] || keysRef.current['d']) {
+      if (keysRef.current['ArrowRight'] || keysRef.current['d'] || tap.right) {
         playerRef.current.x = Math.min(285, playerRef.current.x + speed);
       }
 
@@ -165,13 +174,13 @@ const SpaceShooter = ({ onComplete }: SpaceShooterProps) => {
       if (touchRef.current.shooting) {
         const targetX = touchRef.current.x;
         const diff = targetX - playerRef.current.x;
-        playerRef.current.x += diff * 0.2;
+        playerRef.current.x += diff * Math.min(1, 0.2 * dtFactor);
         playerRef.current.x = Math.max(15, Math.min(285, playerRef.current.x));
       }
 
       // Shoot
-      const now = Date.now();
-      if ((keysRef.current[' '] || touchRef.current.shooting) && now - lastShotRef.current > 150) {
+      const now = ts;
+      if ((keysRef.current[' '] || touchRef.current.shooting || tap.shoot) && now - lastShotRef.current > 150) {
         bulletsRef.current.push({
           id: bulletIdRef.current++,
           x: playerRef.current.x,
@@ -183,13 +192,13 @@ const SpaceShooter = ({ onComplete }: SpaceShooterProps) => {
 
       // Update bullets
       bulletsRef.current = bulletsRef.current.filter(bullet => {
-        bullet.y -= 8;
+        bullet.y -= 8 * dtFactor;
         return bullet.y > -10;
       });
 
       // Update enemies
       enemiesRef.current.forEach(enemy => {
-        const speed = enemy.type === 'fast' ? 2.5 : enemy.type === 'tank' ? 1 : 1.5;
+        const speed = (enemy.type === 'fast' ? 2.5 : enemy.type === 'tank' ? 1 : 1.5) * dtFactor;
         enemy.y += speed;
 
         // Check collision with player
@@ -299,6 +308,7 @@ const SpaceShooter = ({ onComplete }: SpaceShooterProps) => {
       animationId = requestAnimationFrame(gameLoop);
     };
 
+    frameTimeRef.current = null;
     animationId = requestAnimationFrame(gameLoop);
 
     return () => {
@@ -342,12 +352,52 @@ const SpaceShooter = ({ onComplete }: SpaceShooterProps) => {
       )}
 
       {(gameState === 'playing' || gameState === 'gameover') && (
-        <canvas
-          ref={canvasRef}
-          width={300}
-          height={320}
-          className="rounded-lg border-2 border-primary/30 touch-none"
-        />
+        <div className="flex flex-col items-center gap-3">
+          <canvas
+            ref={canvasRef}
+            width={300}
+            height={320}
+            className="rounded-lg border-2 border-primary/30 touch-none"
+          />
+
+          {/* Mobile tap-only controls (buttons) */}
+          <div className="md:hidden flex items-center justify-between w-[300px] gap-3">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="h-14 w-14 text-xl touch-manipulation"
+                onTouchStart={(e) => { e.preventDefault(); tapControlsRef.current.left = true; }}
+                onTouchEnd={() => { tapControlsRef.current.left = false; }}
+                onMouseDown={() => { tapControlsRef.current.left = true; }}
+                onMouseUp={() => { tapControlsRef.current.left = false; }}
+                onMouseLeave={() => { tapControlsRef.current.left = false; }}
+              >
+                ←
+              </Button>
+              <Button
+                variant="outline"
+                className="h-14 w-14 text-xl touch-manipulation"
+                onTouchStart={(e) => { e.preventDefault(); tapControlsRef.current.right = true; }}
+                onTouchEnd={() => { tapControlsRef.current.right = false; }}
+                onMouseDown={() => { tapControlsRef.current.right = true; }}
+                onMouseUp={() => { tapControlsRef.current.right = false; }}
+                onMouseLeave={() => { tapControlsRef.current.right = false; }}
+              >
+                →
+              </Button>
+            </div>
+            <Button
+              className="h-14 px-6 bg-primary touch-manipulation"
+              onTouchStart={(e) => { e.preventDefault(); tapControlsRef.current.shoot = true; }}
+              onTouchEnd={() => { tapControlsRef.current.shoot = false; }}
+              onMouseDown={() => { tapControlsRef.current.shoot = true; }}
+              onMouseUp={() => { tapControlsRef.current.shoot = false; }}
+              onMouseLeave={() => { tapControlsRef.current.shoot = false; }}
+            >
+              Schießen
+            </Button>
+          </div>
+        </div>
       )}
 
       {gameState === 'gameover' && (

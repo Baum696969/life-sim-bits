@@ -23,7 +23,9 @@ const SnakeGame = ({ onComplete }: SnakeGameProps) => {
   const directionRef = useRef<Direction>('RIGHT');
   const foodRef = useRef<Position>({ x: 15, y: 10 });
   const scoreRef = useRef(0);
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const rafRef = useRef<number>();
+  const lastTimeRef = useRef<number | null>(null);
+  const accumulatorRef = useRef(0);
   
   // Dynamic cell size for responsive canvas
   const CELL_SIZE = isMobile ? 14 : 20;
@@ -51,9 +53,7 @@ const SnakeGame = ({ onComplete }: SnakeGameProps) => {
 
   const endGame = useCallback(() => {
     setGameState('gameover');
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
     
     const finalScore = scoreRef.current;
     const moneyEarned = finalScore * 15;
@@ -77,7 +77,7 @@ const SnakeGame = ({ onComplete }: SnakeGameProps) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const gameLoop = () => {
+    const step = () => {
       const snake = snakeRef.current;
       const direction = directionRef.current;
       const food = foodRef.current;
@@ -114,11 +114,17 @@ const SnakeGame = ({ onComplete }: SnakeGameProps) => {
         snake.pop();
       }
 
-      // Draw
+      // no drawing here (rendered via drawOnly)
+    };
+
+    const drawOnly = () => {
+      // draw current state without moving (used for ready/gameover initial paint)
+      const snake = snakeRef.current;
+      const food = foodRef.current;
+
       ctx.fillStyle = '#0a0a0f';
       ctx.fillRect(0, 0, canvasSize, canvasSize);
 
-      // Grid lines (skip on mobile for performance)
       if (!isMobile) {
         ctx.strokeStyle = '#1a1a2f';
         for (let i = 0; i <= GRID_SIZE; i++) {
@@ -133,7 +139,6 @@ const SnakeGame = ({ onComplete }: SnakeGameProps) => {
         }
       }
 
-      // Draw snake
       snake.forEach((segment, index) => {
         ctx.fillStyle = index === 0 ? '#22c55e' : '#16a34a';
         ctx.fillRect(
@@ -144,7 +149,6 @@ const SnakeGame = ({ onComplete }: SnakeGameProps) => {
         );
       });
 
-      // Draw food
       ctx.fillStyle = '#ef4444';
       ctx.beginPath();
       ctx.arc(
@@ -157,17 +161,38 @@ const SnakeGame = ({ onComplete }: SnakeGameProps) => {
       ctx.fill();
     };
 
-    // Initial draw
-    gameLoop();
+    const loop = (ts: number) => {
+      if (gameState !== 'playing') return;
+
+      const last = lastTimeRef.current ?? ts;
+      const dtMs = ts - last;
+      lastTimeRef.current = ts;
+
+      // accumulate and step at fixed tick (so speed stays stable across FPS)
+      accumulatorRef.current += Math.min(250, dtMs);
+      const tickMs = INITIAL_SPEED;
+      while (accumulatorRef.current >= tickMs) {
+        accumulatorRef.current -= tickMs;
+        step();
+      }
+
+      // Always draw latest state
+      drawOnly();
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    // Initial paint
+    drawOnly();
 
     if (gameState === 'playing') {
-      intervalRef.current = setInterval(gameLoop, INITIAL_SPEED);
+      lastTimeRef.current = null;
+      accumulatorRef.current = 0;
+      rafRef.current = requestAnimationFrame(loop);
     }
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [gameState, endGame, generateFood, CELL_SIZE, canvasSize, isMobile]);
 

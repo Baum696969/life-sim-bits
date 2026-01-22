@@ -49,6 +49,7 @@ const BankHeist = ({ onComplete }: BankHeistProps) => {
   
   const gameLoopRef = useRef<number>();
   const keysRef = useRef<Set<string>>(new Set());
+  const escapeLastFrameRef = useRef<number | null>(null);
 
   const initVaults = useCallback(() => {
     const newVaults: Vault[] = [
@@ -203,9 +204,14 @@ const BankHeist = ({ onComplete }: BankHeistProps) => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
-    const gameLoop = () => {
+    const gameLoop = (ts: number) => {
       const keys = keysRef.current;
-      const speed = 2;
+      const last = escapeLastFrameRef.current ?? ts;
+      const dtMs = ts - last;
+      escapeLastFrameRef.current = ts;
+      const dtFactor = Math.min(3, Math.max(0.5, dtMs / (1000 / 60)));
+
+      const speed = 2 * dtFactor;
       
       setPlayerX(prev => {
         let newX = prev;
@@ -232,7 +238,7 @@ const BankHeist = ({ onComplete }: BankHeistProps) => {
       
       // Move guards
       setGuards(prev => prev.map(guard => {
-        let newX = guard.x + (guard.direction === 'right' ? 0.5 : -0.5);
+        let newX = guard.x + (guard.direction === 'right' ? 0.5 : -0.5) * dtFactor;
         let newDirection = guard.direction;
         
         if (newX <= 10) newDirection = 'right';
@@ -253,7 +259,7 @@ const BankHeist = ({ onComplete }: BankHeistProps) => {
         
         if (detected) {
           setAlertLevel(al => {
-            const newLevel = al + 2;
+            const newLevel = al + 2 * dtFactor;
             if (newLevel >= 100) {
               setGameState('gameover');
               soundManager.playCrimeFail();
@@ -268,7 +274,8 @@ const BankHeist = ({ onComplete }: BankHeistProps) => {
       
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
-    
+
+    escapeLastFrameRef.current = null;
     gameLoopRef.current = requestAnimationFrame(gameLoop);
     
     return () => {

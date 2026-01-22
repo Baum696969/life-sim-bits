@@ -39,6 +39,7 @@ const ArcadeFighter = ({ onComplete }: ArcadeFighterProps) => {
   const keysRef = useRef<Set<string>>(new Set());
   const lastAIActionRef = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastFrameRef = useRef<number | null>(null);
 
   const createFighter = (type: FighterType, isPlayer: boolean): Fighter => {
     if (type === 'woman') {
@@ -140,15 +141,20 @@ const ArcadeFighter = ({ onComplete }: ArcadeFighterProps) => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
-    const gameLoop = () => {
+    const gameLoop = (ts: number) => {
       const keys = keysRef.current;
-      const now = Date.now();
+      const now = ts;
+
+      const last = lastFrameRef.current ?? ts;
+      const dtMs = ts - last;
+      lastFrameRef.current = ts;
+      const dtFactor = Math.min(3, Math.max(0.5, dtMs / (1000 / 60)));
       
       // Player movement
       setPlayer(prev => {
         if (!prev) return null;
         let newX = prev.x;
-        const speed = 2;
+        const speed = 2 * dtFactor;
         
         if (keys.has('a') || keys.has('arrowleft')) newX -= speed;
         if (keys.has('d') || keys.has('arrowright')) newX += speed;
@@ -156,7 +162,7 @@ const ArcadeFighter = ({ onComplete }: ArcadeFighterProps) => {
         newX = Math.max(5, Math.min(95, newX));
         
         // Decrease attack frame
-        const newAttackFrame = prev.attackFrame > 0 ? prev.attackFrame - 1 : 0;
+        const newAttackFrame = prev.attackFrame > 0 ? Math.max(0, prev.attackFrame - dtFactor) : 0;
         
         return { ...prev, x: newX, attackFrame: newAttackFrame, isAttacking: newAttackFrame > 0 };
       });
@@ -177,10 +183,10 @@ const ArcadeFighter = ({ onComplete }: ArcadeFighterProps) => {
         // AI logic: move towards player, attack when in range
         if (absDistance > prev.range + 5) {
           // Move towards player
-          newX += distance > 0 ? 1 : -1;
+          newX += (distance > 0 ? 1 : -1) * dtFactor;
         } else if (absDistance < prev.range - 3) {
           // Too close, back off slightly
-          newX += distance > 0 ? -0.5 : 0.5;
+          newX += (distance > 0 ? -0.5 : 0.5) * dtFactor;
         }
         
         newX = Math.max(5, Math.min(95, newX));
@@ -200,7 +206,7 @@ const ArcadeFighter = ({ onComplete }: ArcadeFighterProps) => {
           }, 200);
         }
         
-        const newAttackFrame = prev.attackFrame > 0 ? prev.attackFrame - 1 : 0;
+        const newAttackFrame = prev.attackFrame > 0 ? Math.max(0, prev.attackFrame - dtFactor) : 0;
         
         return { ...prev, x: newX, attackFrame: newAttackFrame, isAttacking: newAttackFrame > 0 };
       });
@@ -225,6 +231,7 @@ const ArcadeFighter = ({ onComplete }: ArcadeFighterProps) => {
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
     
+    lastFrameRef.current = null;
     gameLoopRef.current = requestAnimationFrame(gameLoop);
     
     return () => {

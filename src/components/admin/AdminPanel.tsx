@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,27 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
   const [testAge, setTestAge] = useState(25);
   const [lastTestResult, setLastTestResult] = useState<{ score: number; won: boolean; effects: any } | null>(null);
   const [statsRefresh, setStatsRefresh] = useState(0);
+  const [eventSearch, setEventSearch] = useState('');
+
+  // Wrong-code cooldown: starts at 5s, then +5s each failed attempt
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [cooldownNow, setCooldownNow] = useState(Date.now());
   const { toast } = useToast();
+
+  const cooldownSecondsLeft = useMemo(() => {
+    if (!cooldownUntil) return 0;
+    return Math.max(0, Math.ceil((cooldownUntil - cooldownNow) / 1000));
+  }, [cooldownUntil, cooldownNow]);
+
+  const isInCooldown = cooldownSecondsLeft > 0;
+
+  useEffect(() => {
+    if (!cooldownUntil) return;
+    if (cooldownSecondsLeft <= 0) return;
+    const t = setInterval(() => setCooldownNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [cooldownUntil, cooldownSecondsLeft]);
 
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -47,15 +67,34 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
   });
 
   const handleCodeSubmit = async () => {
+    if (isInCooldown) return;
     if (codeInput === ADMIN_CODE) {
       setIsAuthenticated(true);
+      setFailedAttempts(0);
+      setCooldownUntil(null);
       loadEvents(true);
       toast({ title: 'Admin-Zugang gewährt', description: 'Willkommen, Administrator!' });
     } else {
+      setFailedAttempts((prev) => {
+        const next = prev + 1;
+        const seconds = 5 + (next - 1) * 5;
+        setCooldownUntil(Date.now() + seconds * 1000);
+        return next;
+      });
       toast({ title: 'Falscher Code', description: 'Zugang verweigert.', variant: 'destructive' });
     }
     setCodeInput('');
   };
+
+  const filteredEvents = useMemo(() => {
+    const q = eventSearch.trim().toLowerCase();
+    if (!q) return events;
+    return events.filter((ev) => {
+      const tags = Array.isArray(ev.tags) ? ev.tags.join(' ') : (ev.tags ?? '');
+      const hay = `${ev.title ?? ''} ${ev.text ?? ''} ${ev.category ?? ''} ${tags}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [events, eventSearch]);
 
   const adminInvoke = async <T,>(action: string, payload?: unknown) => {
     const { data, error } = await supabase.functions.invoke('admin-events', {
@@ -434,8 +473,14 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
                 className="max-w-xs text-center text-2xl tracking-widest"
                 placeholder="****"
                 maxLength={4}
+                disabled={isInCooldown}
               />
-              <Button onClick={handleCodeSubmit} className="bg-destructive hover:bg-destructive/90">
+              {isInCooldown && (
+                <p className="text-sm text-muted-foreground">
+                  Bitte warten: <span className="font-medium">{cooldownSecondsLeft}s</span>
+                </p>
+              )}
+              <Button onClick={handleCodeSubmit} className="bg-destructive hover:bg-destructive/90" disabled={isInCooldown}>
                 <Unlock className="mr-2 h-4 w-4" /> Entsperren
               </Button>
             </motion.div>
@@ -531,14 +576,22 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
 
                   {/* Events List */}
                   <div>
-                    <h3 className="font-display text-lg text-primary mb-3">Events ({events.length})</h3>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <h3 className="font-display text-lg text-primary">Events ({filteredEvents.length})</h3>
+                      <Input
+                        value={eventSearch}
+                        onChange={(e) => setEventSearch(e.target.value)}
+                        placeholder="Suchen (Titel, Text, Tags…)"
+                        className="max-w-xs"
+                      />
+                    </div>
                     {isLoading ? (
                       <p className="text-muted-foreground">Laden...</p>
-                    ) : events.length === 0 ? (
+                    ) : filteredEvents.length === 0 ? (
                       <p className="text-muted-foreground">Keine Events vorhanden.</p>
                     ) : (
                       <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                        {events.map((event) => (
+                        {filteredEvents.map((event) => (
                           <div key={event.id} className="bg-muted/30 rounded-lg overflow-hidden">
                             {/* Compact Row */}
                             <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50" onClick={() => handleEventClick(event)}>
