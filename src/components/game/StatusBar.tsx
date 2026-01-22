@@ -8,8 +8,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface StatusBarProps {
   player: Player;
   onToggleNewspaperJob: () => void;
-  onToggleBabysitterJob: () => void;
-  hasBabysitterJob: boolean;
+  onToggleBabysitterJob?: () => void;
+  hasBabysitterJob?: boolean;
   onOpenRelationships?: () => void;
   onOpenCrime?: () => void;
   onOpenCasino?: () => void;
@@ -119,7 +119,7 @@ const FeatureButton = ({ label, icon, requiredAge, currentAge, onClick, variant 
 const StatusBar = ({ 
   player, 
   onToggleNewspaperJob, 
-  onToggleBabysitterJob, 
+  onToggleBabysitterJob,
   hasBabysitterJob,
   onOpenRelationships,
   onOpenCrime,
@@ -130,7 +130,6 @@ const StatusBar = ({
   const isStudent = player.age >= 6 && player.age <= 16 + player.extraSchoolYears;
   const schoolGrade = getSchoolGrade(player.age, player.extraSchoolYears);
   const canHaveNewspaperJob = player.age >= 13 && isStudent;
-  const canHaveBabysitterJob = player.age >= 14 && isStudent;
   const lifePhase = getLifePhase(player.age);
 
   // Calculate yearly income
@@ -140,9 +139,6 @@ const StatusBar = ({
   }
   if (player.hasNewspaperJob) {
     yearlyIncome += 50;
-  }
-  if (hasBabysitterJob) {
-    yearlyIncome += 80;
   }
 
   // Mobile Layout
@@ -257,22 +253,6 @@ const StatusBar = ({
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   <Newspaper className="h-4 w-4" />
-                </button>
-
-                <button
-                  onClick={player.age >= 14 ? onToggleBabysitterJob : undefined}
-                  disabled={player.age < 14}
-                  className={`
-                    h-11 w-11 rounded-full flex items-center justify-center border transition-all active:scale-95
-                    ${player.age < 14 
-                      ? 'opacity-40 bg-muted/50 border-muted cursor-not-allowed'
-                      : hasBabysitterJob 
-                        ? 'bg-primary text-primary-foreground border-primary' 
-                        : 'bg-muted/50 border-primary/30'}
-                  `}
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  <Baby className="h-4 w-4" />
                 </button>
               </>
             )}
@@ -408,15 +388,6 @@ const StatusBar = ({
                 currentAge={player.age}
                 onClick={onToggleNewspaperJob}
                 activeClass={player.hasNewspaperJob ? 'bg-primary text-primary-foreground' : 'border-primary/50'}
-              />
-              
-              <FeatureButton
-                label="Babysitter"
-                icon={<Baby className="h-3 w-3" />}
-                requiredAge={14}
-                currentAge={player.age}
-                onClick={onToggleBabysitterJob}
-                activeClass={hasBabysitterJob ? 'bg-primary text-primary-foreground' : 'border-primary/50'}
               />
             </>
           )}
