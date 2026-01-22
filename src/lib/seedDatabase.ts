@@ -1,5 +1,6 @@
 // Database seeding utility for GitLife events
 import { supabase } from '@/integrations/supabase/client';
+import { seedEvents } from '@/data/seedEvents';
 
 // All seed events - will be migrated to database
 export const allSeedEvents = [
@@ -739,28 +740,38 @@ export const checkIfSeeded = async (): Promise<boolean> => {
 // Seed all events to database
 export const seedEventsToDatabase = async (): Promise<{ success: boolean; count: number; error?: string }> => {
   try {
-    // Check if already seeded
-    const alreadySeeded = await checkIfSeeded();
-    if (alreadySeeded) {
+    // Insert only missing seed events (by title) to avoid duplicates and allow adding new seeds over time.
+    const { data: existing, error: existingError } = await supabase
+      .from('events')
+      .select('title');
+
+    if (existingError) {
+      console.error('Error checking existing events:', existingError);
+      return { success: false, count: 0, error: existingError.message };
+    }
+
+    const existingTitles = new Set((existing ?? []).map((e: any) => String(e.title ?? '').trim().toLowerCase()));
+
+    const eventsToInsert = seedEvents
+      .filter((e) => !existingTitles.has(String(e.title ?? '').trim().toLowerCase()))
+      .map((event) => ({
+        title: event.title,
+        text: event.text,
+        min_age: event.minAge,
+        max_age: event.maxAge,
+        category: String(event.category),
+        weight: event.weight,
+        tags: event.tags,
+        // DB column type is Json; our EventOption[] is JSON-serializable
+        options: event.options as any,
+        is_active: true,
+      }));
+
+    if (eventsToInsert.length === 0) {
       return { success: true, count: 0 };
     }
 
-    const eventsToInsert = allSeedEvents.map(event => ({
-      title: event.title,
-      text: event.text,
-      min_age: event.min_age,
-      max_age: event.max_age,
-      category: event.category,
-      weight: event.weight,
-      tags: event.tags,
-      options: event.options,
-      is_active: true,
-    }));
-
-    const { data, error } = await supabase
-      .from('events')
-      .insert(eventsToInsert)
-      .select();
+    const { data, error } = await supabase.from('events').insert(eventsToInsert).select();
 
     if (error) {
       console.error('Error seeding events:', error);
