@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, RotateCcw, Settings, DollarSign } from 'lucide-react';
+import { Play, RotateCcw, Settings, DollarSign, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { hasSavedGame, loadGame, createNewPlayer, createNewGameState, clearSave } from '@/lib/gameUtils';
 import GameScreen from '@/components/game/GameScreen';
@@ -183,6 +183,11 @@ const Index = () => {
                     className="text-muted-foreground hover:text-primary"
                   >
                     <DollarSign className="mr-2 h-5 w-5" /> Casino
+                  </Button>
+                </Link>
+                <Link to="/download">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-primary">
+                    <Download className="mr-2 h-5 w-5" /> Download
                   </Button>
                 </Link>
                 <ChangelogModal />
