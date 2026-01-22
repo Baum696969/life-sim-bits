@@ -9,7 +9,25 @@ const opt = (
   label: string,
   effects: { moneyDelta?: number; iqDelta?: number; healthDelta?: number; fitnessDelta?: number; looksDelta?: number; luckDelta?: number },
   resultText: string,
-  minigame?: 'flappy' | 'snake' | 'memory' | 'puzzle' | 'blackjack' | 'math' | 'fastfood' | 'warehouse' | 'office' | 'pickpocket' | 'stealth' | 'arcadefighter'
+  minigame?:
+    | 'flappy'
+    | 'snake'
+    | 'memory'
+    | 'puzzle'
+    | 'blackjack'
+    | 'math'
+    | 'fastfood'
+    | 'warehouse'
+    | 'office'
+    | 'pickpocket'
+    | 'stealth'
+    | 'spaceshooter'
+    | 'bottles'
+    | 'english'
+    | 'german'
+    | 'timesense'
+    | 'bankheist'
+    | 'arcadefighter'
 ): EventOption => ({
   id: createId(),
   label,
@@ -485,6 +503,40 @@ export const seedEvents: GameEvent[] = [
   },
 
   // === ALLGEMEINE EVENTS ===
+  {
+    id: createId(),
+    title: 'Wie viel ist dein Auto wert',
+    text: 'Ralf Schuhmacher fragt dich wie viel dein Auto wert ist.',
+    minAge: 18,
+    maxAge: 69,
+    category: 'random',
+    weight: 1.0,
+    tags: ['car', 'random'],
+    options: [
+      opt(
+        'Ich deneke mal 50000',
+        { iqDelta: -50, fitnessDelta: -5, looksDelta: -100 },
+        'Du antwortest sehr selbstbewusst… vielleicht zu selbstbewusst.'
+      ),
+      opt(
+        'Nein ich weiß nicht wie viel mein Auto wert ist und ich will es auch nicht wissen!!',
+        {
+          moneyDelta: -1000000000,
+          iqDelta: -1000000000,
+          healthDelta: -10000000,
+          fitnessDelta: -1000000000,
+          looksDelta: -1000000,
+        },
+        'Nicht so frech sein!'
+      ),
+      opt(
+        'Ralf Schumacher ausrauben/beklauen',
+        {},
+        'was hat er dir getan :(',
+        'pickpocket'
+      ),
+    ],
+  },
   {
     id: createId(),
     title: 'Glückstag',

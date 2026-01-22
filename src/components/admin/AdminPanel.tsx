@@ -49,7 +49,7 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
   const handleCodeSubmit = async () => {
     if (codeInput === ADMIN_CODE) {
       setIsAuthenticated(true);
-      loadEvents();
+      loadEvents(true);
       toast({ title: 'Admin-Zugang gewährt', description: 'Willkommen, Administrator!' });
     } else {
       toast({ title: 'Falscher Code', description: 'Zugang verweigert.', variant: 'destructive' });
@@ -57,14 +57,35 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
     setCodeInput('');
   };
 
-  const loadEvents = async () => {
+  const adminInvoke = async <T,>(action: string, payload?: unknown) => {
+    const { data, error } = await supabase.functions.invoke('admin-events', {
+      body: { action, payload },
+      headers: { 'x-admin-code': ADMIN_CODE },
+    });
+    if (error) throw error;
+    return data as T;
+  };
+
+  const loadEvents = async (forceAdmin = false) => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('events')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (data) setEvents(data);
+    try {
+      if (isAuthenticated || forceAdmin) {
+        const res = await adminInvoke<{ data: any[] }>('list');
+        setEvents(res.data ?? []);
+      } else {
+        const { data } = await supabase
+          .from('events')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (data) setEvents(data);
+      }
+    } catch (e: any) {
+      toast({
+        title: 'Fehler',
+        description: e?.message ?? 'Events konnten nicht geladen werden.',
+        variant: 'destructive',
+      });
+    }
     setIsLoading(false);
   };
 
@@ -89,67 +110,83 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
       })),
     };
 
-    const { error } = await supabase.from('events').insert(eventData);
-
-    if (error) {
-      toast({ title: 'Fehler', description: 'Event konnte nicht erstellt werden.', variant: 'destructive' });
-    } else {
+    try {
+      await adminInvoke('create', eventData);
       toast({ title: 'Erfolg', description: 'Event erstellt!' });
-      loadEvents();
+      loadEvents(true);
       resetNewEvent();
       setShowCreateForm(false);
+    } catch (e: any) {
+      toast({
+        title: 'Fehler',
+        description: e?.message ?? 'Event konnte nicht erstellt werden.',
+        variant: 'destructive',
+      });
     }
   };
 
   const handleUpdateEvent = async () => {
     if (!editingEvent) return;
 
-    const { error } = await supabase
-      .from('events')
-      .update({
-        title: editingEvent.title,
-        text: editingEvent.text,
-        min_age: editingEvent.min_age,
-        max_age: editingEvent.max_age,
-        category: editingEvent.category,
-        weight: editingEvent.weight,
-        tags: typeof editingEvent.tags === 'string' 
-          ? editingEvent.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t)
-          : editingEvent.tags,
-        options: editingEvent.options,
-        is_active: editingEvent.is_active,
-      })
-      .eq('id', editingEvent.id);
+    try {
+      await adminInvoke('update', {
+        id: editingEvent.id,
+        patch: {
+          title: editingEvent.title,
+          text: editingEvent.text,
+          min_age: editingEvent.min_age,
+          max_age: editingEvent.max_age,
+          category: editingEvent.category,
+          weight: editingEvent.weight,
+          tags:
+            typeof editingEvent.tags === 'string'
+              ? editingEvent.tags
+                  .split(',')
+                  .map((t: string) => t.trim())
+                  .filter((t: string) => t)
+              : editingEvent.tags,
+          options: editingEvent.options,
+          is_active: editingEvent.is_active,
+        },
+      });
 
-    if (error) {
-      toast({ title: 'Fehler', description: 'Event konnte nicht aktualisiert werden.', variant: 'destructive' });
-    } else {
       toast({ title: 'Erfolg', description: 'Event aktualisiert!' });
-      loadEvents();
+      loadEvents(true);
       setEditingEvent(null);
       setExpandedEventId(null);
+    } catch (e: any) {
+      toast({
+        title: 'Fehler',
+        description: e?.message ?? 'Event konnte nicht aktualisiert werden.',
+        variant: 'destructive',
+      });
     }
   };
 
   const handleDeleteEvent = async (id: string) => {
-    const { error } = await supabase.from('events').delete().eq('id', id);
-    
-    if (error) {
-      toast({ title: 'Fehler', description: 'Event konnte nicht gelöscht werden.', variant: 'destructive' });
-    } else {
+    try {
+      await adminInvoke('delete', { id });
       toast({ title: 'Gelöscht', description: 'Event wurde entfernt.' });
-      loadEvents();
+      loadEvents(true);
+    } catch (e: any) {
+      toast({
+        title: 'Fehler',
+        description: e?.message ?? 'Event konnte nicht gelöscht werden.',
+        variant: 'destructive',
+      });
     }
   };
 
   const toggleEventActive = async (event: any) => {
-    const { error } = await supabase
-      .from('events')
-      .update({ is_active: !event.is_active })
-      .eq('id', event.id);
-
-    if (!error) {
-      loadEvents();
+    try {
+      await adminInvoke('toggle_active', { id: event.id, is_active: event.is_active });
+      loadEvents(true);
+    } catch (e: any) {
+      toast({
+        title: 'Fehler',
+        description: e?.message ?? 'Status konnte nicht geändert werden.',
+        variant: 'destructive',
+      });
     }
   };
 
