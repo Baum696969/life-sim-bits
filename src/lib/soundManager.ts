@@ -566,37 +566,39 @@ class SoundManager {
       clearInterval(this.ambientInterval);
     }
 
-    const playAmbientNote = () => {
+    // Richer, calmer loop: slow chord progression + occasional subtle arpeggio.
+    // Frequencies are in Hz.
+    const chords: number[][] = [
+      [130.81, 164.81, 196.0], // C3 E3 G3
+      [146.83, 174.61, 220.0], // D3 F3 A3
+      [164.81, 196.0, 246.94], // E3 G3 B3
+      [174.61, 220.0, 261.63], // F3 A3 C4
+    ];
+
+    let chordIndex = 0;
+    const playChord = () => {
       if (!this.enabled) return;
-      
-      const ctx = this.getContext();
-      const notes = [130.81, 164.81, 196, 220, 261.63]; // C3, E3, G3, A3, C4
-      const note = notes[Math.floor(Math.random() * notes.length)];
-      
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(note, ctx.currentTime);
-      
-      const vol = 0.03 * this.masterVolume;
-      gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.5);
-      gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 3);
-      
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 3);
+      const chord = chords[chordIndex % chords.length];
+      chordIndex += 1;
+
+      // Pad-like blend: triangle (warm) + sine (soft)
+      this.createChord(chord, 2.8, "triangle", 0.05);
+      this.createChord(chord.map((n) => n * 2), 2.2, "sine", 0.025);
+
+      // Rare sparkle on top (keeps it cyber/arcade but not harsh)
+      if (Math.random() > 0.6) {
+        const sparkle = chord[Math.floor(Math.random() * chord.length)] * 4;
+        setTimeout(() => this.createOscillatorSound(sparkle, 0.18, "sine", 0.05), 400);
+        setTimeout(() => this.createOscillatorSound(sparkle * 1.25, 0.12, "sine", 0.035), 560);
+      }
     };
 
-    // Play note every 3-5 seconds
+    // Immediately start with a chord, then continue slowly.
+    playChord();
+
     this.ambientInterval = setInterval(() => {
-      if (Math.random() > 0.4) {
-        playAmbientNote();
-      }
-    }, 3500);
+      playChord();
+    }, 5200);
   }
 
   stopBackgroundMusic(): void {
