@@ -76,6 +76,7 @@ export const getMinigameLabel = (type: MinigameType): string => {
     warehouse: 'Lager Praktikum',
     office: 'Büro Praktikum',
     bankheist: 'Banküberfall',
+    arcadefighter: 'Arcade Fighter',
   };
   return labels[type];
 };

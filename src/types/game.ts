@@ -145,7 +145,8 @@ export type MinigameType =
   | 'fastfood'
   | 'warehouse'
   | 'office'
-  | 'bankheist';
+  | 'bankheist'
+  | 'arcadefighter';
 
 // Internship tracking
 export interface InternshipRecord {
