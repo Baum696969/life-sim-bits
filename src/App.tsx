@@ -11,6 +11,7 @@ import Settings from "./pages/Settings";
 import Download from "./pages/Download";
 import NotFound from "./pages/NotFound";
 import { lockLandscapeOnNative } from "@/lib/screenOrientation";
+import { seedEventsToDatabase } from "@/lib/seedDatabase";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,10 @@ const App = () => {
   useEffect(() => {
     // Only affects the installed native app; does nothing in the browser.
     void lockLandscapeOnNative();
+
+    // Ensure seed events (incl. "Wie viel ist dein Auto wert") exist in the backend.
+    // Safe to call multiple times because we only insert missing titles.
+    void seedEventsToDatabase();
   }, []);
 
   return (
