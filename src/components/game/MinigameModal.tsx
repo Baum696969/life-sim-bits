@@ -20,6 +20,7 @@ import WarehouseGame from '../minigames/WarehouseGame';
 import OfficeGame from '../minigames/OfficeGame';
 import BankHeist from '../minigames/BankHeist';
 import ArcadeFighter from '../minigames/ArcadeFighter';
+import Blackjack from '../minigames/Blackjack';
 
 interface MinigameModalProps {
   isOpen: boolean;
@@ -35,6 +36,8 @@ const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney, pla
 
   const renderMinigame = () => {
     switch (minigame) {
+      case 'blackjack':
+        return <Blackjack onComplete={onComplete} playerMoney={playerMoney} playerAge={playerAge} />;
       case 'flappy':
         return <FlappyBird onComplete={onComplete} />;
       case 'snake':

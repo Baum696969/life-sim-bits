@@ -21,7 +21,7 @@ import AdoptionModal from './AdoptionModal';
 import PropertyModal from './PropertyModal';
 import { RelationshipState, Partner, FamilyActivity, Child } from '@/types/relationship';
 import { PregnancyState, createPregnancyState, generatePregnancy, getSuggestedNames } from '@/types/pregnancy';
-import { PropertyState, createPropertyState, Property, calculateYearlyRent } from '@/types/property';
+import { PropertyState, createPropertyState, Property, availableProperties } from '@/types/property';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +29,8 @@ import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamil
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { FriendActivity, friendActivities } from '@/types/relationship';
+import StudentJobInterviewModal from './StudentJobInterviewModal';
+import { getPrisonEvents } from '@/lib/crimeSystem';
 
 interface GameScreenProps {
   initialState: GameState;
@@ -53,7 +55,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const [showBabyNamingModal, setShowBabyNamingModal] = useState(false);
   const [showAdoptionModal, setShowAdoptionModal] = useState(false);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
-  const [hasBabysitterJob, setHasBabysitterJob] = useState(false);
+  const [showStudentJobInterview, setShowStudentJobInterview] = useState(false);
   const [pendingBabies, setPendingBabies] = useState<{ gender: 'male' | 'female'; suggestedName: string }[]>([]);
   const [relationshipState, setRelationshipState] = useState<RelationshipState>(() => 
     createRelationshipState(initialState.player.birthYear)
@@ -115,8 +117,44 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
 
   const selectNextEvent = () => {
     if (allEvents.length === 0) return; // Don't select if no events loaded
-    
-    const eligibleEvents = getEventsForAge(allEvents, gameState.player.age);
+
+    // Prison overrides normal life events
+    if (gameState.player.inPrison && gameState.player.prisonYearsRemaining > 0) {
+      const prisonPool = getPrisonEvents();
+      const prisonEvent = prisonPool[Math.floor(Math.random() * prisonPool.length)];
+      const event: GameEvent = {
+        id: `prison-${Date.now()}`,
+        title: prisonEvent.title,
+        text: prisonEvent.description,
+        minAge: 0,
+        maxAge: 200,
+        category: 'prison',
+        weight: 1,
+        tags: ['prison'],
+        options: [
+          {
+            id: 'continue',
+            label: 'Weiter',
+            effects: prisonEvent.effects,
+            resultText: prisonEvent.description,
+          },
+        ],
+      };
+
+      soundManager.playEventAppear();
+      setGameState(prev => ({ ...prev, currentEvent: event }));
+      setSelectedOption(null);
+      setShowResult(false);
+      return;
+    }
+
+    let eligibleEvents = getEventsForAge(allEvents, gameState.player.age);
+
+    // Consistency rule: promotion only if the player has a job
+    if (!gameState.player.job) {
+      eligibleEvents = eligibleEvents.filter(e => e.title !== 'Beförderung');
+    }
+
     const event = selectRandomEvent(eligibleEvents);
     soundManager.playEventAppear();
     setGameState(prev => ({ ...prev, currentEvent: event }));
@@ -124,14 +162,55 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     setShowResult(false);
   };
 
+  const resolvePropertyFromOption = (optionLabel: string): Property | null => {
+    const l = optionLabel.toLowerCase();
+    if (l.includes('mansion') || l.includes('herrenhaus')) return availableProperties.find(p => p.type === 'mansion') || null;
+    if (l.includes('villa')) return availableProperties.find(p => p.type === 'villa') || null;
+    if (l.includes('haus')) return availableProperties.find(p => p.type === 'house') || null;
+    if (l.includes('wohnung') || l.includes('penthouse')) return availableProperties.find(p => p.type === 'apartment') || null;
+    return null;
+  };
+
   const handleOptionSelect = (option: EventOption) => {
     soundManager.playClick();
     setSelectedOption(option);
 
     // Check for special event tags
-    const currentEvent = gameState.currentEvent;
-    const isLottoEvent = currentEvent?.tags?.includes('lotto') && option.label.includes('kaufen');
-    const isAddSiblingEvent = currentEvent?.tags?.includes('add_sibling');
+    const activeEvent = gameState.currentEvent;
+    const isLottoEvent = activeEvent?.tags?.includes('lotto') && option.label.includes('kaufen');
+    const isAddSiblingEvent = activeEvent?.tags?.includes('add_sibling');
+
+    // Hard block: prison state should never run normal events
+    if (gameState.player.inPrison && gameState.player.prisonYearsRemaining > 0) {
+      applyOptionEffects(option);
+      return;
+    }
+
+    // Strict consistency: property buys should affect property state (not just money)
+    const looksLikePropertyBuy =
+      (activeEvent?.tags?.includes('property') || activeEvent?.tags?.includes('housing') || activeEvent?.tags?.includes('living') || activeEvent?.tags?.includes('investment')) &&
+      option.label.toLowerCase().includes('kauf');
+
+    if (looksLikePropertyBuy) {
+      const p = resolvePropertyFromOption(option.label) || availableProperties.find(x => x.purchasePrice === Math.abs(option.effects.moneyDelta || 0)) || null;
+      if (!p) {
+        toast.error('Keine passende Immobilie gefunden.');
+        return;
+      }
+      if (gameState.player.money < p.purchasePrice) {
+        toast.error('Nicht genug Geld!');
+        return;
+      }
+
+      // Buy via real property system; keep event effects except the moneyDelta to avoid double subtraction
+      handleBuyProperty({ ...p, owned: true, isRented: false });
+      const sanitizedOption: EventOption = {
+        ...option,
+        effects: { ...option.effects, moneyDelta: 0 },
+      };
+      applyOptionEffects(sanitizedOption);
+      return;
+    }
 
     if (option.minigame) {
       soundManager.playMinigameStart();
@@ -243,11 +322,6 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const advanceYear = () => {
     soundManager.playNewYear();
     let agedPlayer = agePlayer(gameState.player);
-    
-    // Add side job income
-    if (hasBabysitterJob) {
-      agedPlayer = { ...agedPlayer, money: agedPlayer.money + 80 };
-    }
     
     // Add Kindergeld (€300 per child per year)
     const kindergeldAmount = relationshipState.children.length * 300;
@@ -395,15 +469,27 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
 
   const handleToggleNewspaperJob = () => {
     soundManager.playClick();
-    setGameState(prev => ({
-      ...prev,
-      player: { ...prev.player, hasNewspaperJob: !prev.player.hasNewspaperJob },
-    }));
+    // Only one student job: newspaper.
+    // If currently employed -> allow quitting instantly.
+    if (gameState.player.hasNewspaperJob) {
+      setGameState(prev => ({
+        ...prev,
+        player: { ...prev.player, hasNewspaperJob: false },
+      }));
+      toast.info('Du hast den Schülerjob gekündigt.');
+      return;
+    }
+
+    // Otherwise: interview/quiz first
+    setShowStudentJobInterview(true);
   };
 
-  const handleToggleBabysitterJob = () => {
-    soundManager.playClick();
-    setHasBabysitterJob(prev => !prev);
+  const handleStudentJobPassed = () => {
+    setGameState(prev => ({
+      ...prev,
+      player: { ...prev.player, hasNewspaperJob: true },
+    }));
+    toast.success('Du hast den Schülerjob bekommen!');
   };
 
   // Crime handler
@@ -849,8 +935,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       <StatusBar
         player={gameState.player}
         onToggleNewspaperJob={handleToggleNewspaperJob}
-        onToggleBabysitterJob={handleToggleBabysitterJob}
-        hasBabysitterJob={hasBabysitterJob}
+        hasBabysitterJob={false}
         onOpenRelationships={() => setShowRelationshipModal(true)}
         onOpenCrime={() => setShowCrimeModal(true)}
         onOpenCasino={goToCasino}
@@ -865,6 +950,12 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         onClose={() => setShowMinigame(false)}
         playerMoney={gameState.player.money}
         playerAge={gameState.player.age}
+      />
+
+      <StudentJobInterviewModal
+        isOpen={showStudentJobInterview}
+        onClose={() => setShowStudentJobInterview(false)}
+        onPassed={handleStudentJobPassed}
       />
 
       {/* Job Modal */}
