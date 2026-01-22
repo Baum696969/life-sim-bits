@@ -265,6 +265,7 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
     { value: 'warehouse', label: 'Lager Praktikum' },
     { value: 'office', label: 'Büro Praktikum' },
     { value: 'bankheist', label: 'Banküberfall' },
+    { value: 'arcadefighter', label: 'Arcade Fighter' },
   ];
 
   // Minigames by category for testing
@@ -280,6 +281,7 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
     { id: 'english', name: 'Englisch-Test', emoji: '🇬🇧', description: 'Übersetze Wörter ins Englische' },
     { id: 'german', name: 'Deutsch-Test', emoji: '📝', description: 'Grammatik und Rechtschreibung' },
     { id: 'timesense', name: 'Zeitgefühl', emoji: '⏱️', description: 'Stoppe genau nach X Sekunden ohne Uhr' },
+    { id: 'arcadefighter', name: 'Arcade Fighter', emoji: '🎮', description: '1v1 Kampfspiel mit Kickerin oder Boxer' },
   ];
 
   const internshipMinigames = [

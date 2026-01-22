@@ -9,7 +9,7 @@ const opt = (
   label: string,
   effects: { moneyDelta?: number; iqDelta?: number; healthDelta?: number; fitnessDelta?: number; looksDelta?: number; luckDelta?: number },
   resultText: string,
-  minigame?: 'flappy' | 'snake' | 'memory' | 'puzzle' | 'blackjack' | 'math' | 'fastfood' | 'warehouse' | 'office' | 'pickpocket' | 'stealth'
+  minigame?: 'flappy' | 'snake' | 'memory' | 'puzzle' | 'blackjack' | 'math' | 'fastfood' | 'warehouse' | 'office' | 'pickpocket' | 'stealth' | 'arcadefighter'
 ): EventOption => ({
   id: createId(),
   label,
@@ -1131,6 +1131,39 @@ export const seedEvents: GameEvent[] = [
         effects: { moneyDelta: 150, iqDelta: 2 },
         resultText: 'Du lernst den Büroalltag kennen.',
         minigame: 'office' as const,
+      },
+    ],
+  },
+  
+  // === FREUNDE ARCADE EVENT ===
+  {
+    id: createId(),
+    title: 'Arcade-Einladung',
+    text: 'Deine Freunde laden dich ein, in der Spielhalle ein Kampfspiel zu spielen! 🎮 "Los komm, wir zocken Arcade Fighter!"',
+    minAge: 12,
+    maxAge: 45,
+    category: 'social' as EventCategory,
+    weight: 2.5,
+    tags: ['friends', 'minigame', 'arcade'],
+    options: [
+      {
+        id: createId(),
+        label: '🎮 Klar, bin dabei!',
+        effects: { moneyDelta: -5 },
+        resultText: 'Du gehst mit deinen Freunden in die Spielhalle.',
+        minigame: 'arcadefighter' as const,
+      },
+      {
+        id: createId(),
+        label: '😴 Keine Lust heute',
+        effects: { luckDelta: -2 },
+        resultText: 'Deine Freunde sind enttäuscht, aber akzeptieren es.',
+      },
+      {
+        id: createId(),
+        label: '💸 Kein Geld für Arcade',
+        effects: { healthDelta: -2 },
+        resultText: 'Du bleibst zu Hause und fühlst dich etwas ausgeschlossen.',
       },
     ],
   },
