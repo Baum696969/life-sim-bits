@@ -264,6 +264,7 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
     { value: 'fastfood', label: 'Fast Food Praktikum' },
     { value: 'warehouse', label: 'Lager Praktikum' },
     { value: 'office', label: 'Büro Praktikum' },
+    { value: 'bankheist', label: 'Banküberfall' },
   ];
 
   // Minigames by category for testing
@@ -290,6 +291,7 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
   const crimeMinigames = [
     { id: 'pickpocket', name: 'Taschendiebstahl', emoji: '🤏', description: 'Tippe Wörter schnell für erfolgreichen Diebstahl' },
     { id: 'stealth', name: 'Einbruch', emoji: '🥷', description: 'Schleiche dich vorbei an Wachen und sammle Beute' },
+    { id: 'bankheist', name: 'Banküberfall', emoji: '🏦', description: 'Knacke Tresore und fliehe vor der Polizei' },
   ];
 
   const allMinigames = [...eventMinigames, ...internshipMinigames, ...crimeMinigames];
@@ -335,6 +337,21 @@ const AdminPanel = ({ isOpen, onClose }: AdminPanelProps) => {
     { id: 'propertyBuy', name: 'Immobilie kaufen', fn: () => soundManager.playPropertyBuy() },
     { id: 'propertySell', name: 'Immobilie verkaufen', fn: () => soundManager.playPropertySell() },
     { id: 'kindergeld', name: 'Kindergeld', fn: () => soundManager.playKindergeld() },
+    // NEW SOUNDS
+    { id: 'vaultClick', name: 'Tresor-Klick', fn: () => soundManager.playVaultClick() },
+    { id: 'vaultUnlock', name: 'Tresor öffnen', fn: () => soundManager.playVaultUnlock() },
+    { id: 'alarmTrigger', name: 'Alarm auslösen', fn: () => soundManager.playAlarmTrigger() },
+    { id: 'footsteps', name: 'Schritte', fn: () => soundManager.playFootsteps() },
+    { id: 'guardAlert', name: 'Wache alarmiert', fn: () => soundManager.playGuardAlert() },
+    { id: 'kiss', name: 'Kuss', fn: () => soundManager.playKiss() },
+    { id: 'heartbreak', name: 'Herzschmerz', fn: () => soundManager.playHeartbreak() },
+    { id: 'wedding', name: 'Hochzeit', fn: () => soundManager.playWedding() },
+    { id: 'drink', name: 'Trinken', fn: () => soundManager.playDrink() },
+    { id: 'eat', name: 'Essen', fn: () => soundManager.playEat() },
+    { id: 'gym', name: 'Training', fn: () => soundManager.playGym() },
+    { id: 'friendActivity', name: 'Freunde-Aktivität', fn: () => soundManager.playFriendActivity() },
+    { id: 'argument', name: 'Streit', fn: () => soundManager.playArgument() },
+    { id: 'reconcile', name: 'Versöhnung', fn: () => soundManager.playReconcile() },
   ];
 
   const handleMinigameTest = (minigameId: string) => {

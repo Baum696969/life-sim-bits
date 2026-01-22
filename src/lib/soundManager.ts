@@ -434,6 +434,123 @@ class SoundManager {
     setTimeout(() => this.createOscillatorSound(1600, 0.06, 'sine', 0.07), 100);
   }
 
+  // BANK HEIST SOUNDS
+  playVaultClick(): void {
+    if (!this.enabled) return;
+    // Mechanical click of vault dial
+    this.createOscillatorSound(400, 0.03, 'square', 0.15);
+    this.createOscillatorSound(800, 0.02, 'sine', 0.1);
+  }
+
+  playVaultUnlock(): void {
+    if (!this.enabled) return;
+    // Heavy vault door opening
+    this.createOscillatorSound(100, 0.3, 'sawtooth', 0.15);
+    setTimeout(() => this.createOscillatorSound(150, 0.2, 'square', 0.12), 100);
+    setTimeout(() => {
+      // Success chime
+      this.createChord([523, 784, 1047], 0.3, 'sine', 0.18);
+    }, 300);
+  }
+
+  playAlarmTrigger(): void {
+    if (!this.enabled) return;
+    // Bank alarm
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        this.createOscillatorSound(880, 0.15, 'square', 0.2);
+        this.createOscillatorSound(660, 0.15, 'square', 0.15);
+      }, i * 200);
+    }
+  }
+
+  playFootsteps(): void {
+    if (!this.enabled) return;
+    // Sneaky footsteps
+    this.createOscillatorSound(100, 0.05, 'sine', 0.08);
+    setTimeout(() => this.createOscillatorSound(80, 0.05, 'sine', 0.06), 150);
+  }
+
+  playGuardAlert(): void {
+    if (!this.enabled) return;
+    // Guard spotted player
+    this.createOscillatorSound(600, 0.1, 'square', 0.15);
+    setTimeout(() => this.createOscillatorSound(800, 0.15, 'square', 0.12), 100);
+  }
+
+  // RELATIONSHIP SOUNDS
+  playKiss(): void {
+    if (!this.enabled) return;
+    // Cute kiss sound
+    this.createOscillatorSound(800, 0.05, 'sine', 0.1);
+    setTimeout(() => this.createOscillatorSound(600, 0.08, 'sine', 0.08), 50);
+  }
+
+  playHeartbreak(): void {
+    if (!this.enabled) return;
+    // Sad breakup sound
+    const notes = [523, 440, 349, 294];
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.createOscillatorSound(freq, 0.25, 'triangle', 0.15), i * 150);
+    });
+  }
+
+  playWedding(): void {
+    if (!this.enabled) return;
+    // Wedding bells
+    const bellNotes = [784, 988, 784, 988, 1047, 988, 784];
+    bellNotes.forEach((freq, i) => {
+      setTimeout(() => {
+        this.createOscillatorSound(freq, 0.3, 'sine', 0.18);
+        this.createOscillatorSound(freq * 0.5, 0.3, 'triangle', 0.1);
+      }, i * 200);
+    });
+  }
+
+  // ACTIVITY SOUNDS
+  playDrink(): void {
+    if (!this.enabled) return;
+    // Drinking/party sound
+    this.createOscillatorSound(400, 0.08, 'sine', 0.1);
+    setTimeout(() => this.createOscillatorSound(600, 0.1, 'sine', 0.08), 100);
+  }
+
+  playEat(): void {
+    if (!this.enabled) return;
+    // Eating/restaurant sound
+    this.createOscillatorSound(300, 0.05, 'triangle', 0.08);
+    setTimeout(() => this.createOscillatorSound(350, 0.05, 'triangle', 0.06), 80);
+    setTimeout(() => this.createOscillatorSound(400, 0.05, 'triangle', 0.05), 160);
+  }
+
+  playGym(): void {
+    if (!this.enabled) return;
+    // Workout sound
+    this.createOscillatorSound(150, 0.1, 'square', 0.1);
+    setTimeout(() => this.createOscillatorSound(200, 0.08, 'square', 0.08), 150);
+    setTimeout(() => this.createOscillatorSound(250, 0.06, 'square', 0.06), 300);
+  }
+
+  playFriendActivity(): void {
+    if (!this.enabled) return;
+    // Happy social sound
+    this.createChord([523, 659, 784], 0.15, 'sine', 0.12);
+  }
+
+  playArgument(): void {
+    if (!this.enabled) return;
+    // Arguing/conflict sound
+    this.createOscillatorSound(250, 0.1, 'sawtooth', 0.12);
+    setTimeout(() => this.createOscillatorSound(200, 0.15, 'sawtooth', 0.1), 100);
+  }
+
+  playReconcile(): void {
+    if (!this.enabled) return;
+    // Making up / reconciliation
+    this.createOscillatorSound(400, 0.1, 'sine', 0.1);
+    setTimeout(() => this.createChord([523, 659, 784], 0.2, 'sine', 0.12), 150);
+  }
+
   // Background Music
   startBackgroundMusic(): void {
     if (!this.enabled) return;
