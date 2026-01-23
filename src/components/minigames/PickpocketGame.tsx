@@ -1,102 +1,136 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
+import { haptics } from '@/lib/haptics';
 
 interface PickpocketGameProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
 }
 
-const WORDS = [
-  'greifen', 'schnell', 'leise', 'unauffällig', 'wegnehmen',
-  'tasche', 'geldbörse', 'flink', 'geschickt', 'vorsichtig',
-  'beobachten', 'ablenken', 'zugreifen', 'entwenden', 'schleichen',
-  'heimlich', 'blitzschnell', 'verschwinden', 'flucht', 'beute'
+interface Stage {
+  speed: number;
+  greenWidth: number;
+  name: string;
+}
+
+const STAGES: Stage[] = [
+  { speed: 2, greenWidth: 25, name: 'Tasche erspähen' },
+  { speed: 3.5, greenWidth: 18, name: 'Zugreifen' },
+  { speed: 5.5, greenWidth: 12, name: 'Entkommen' },
 ];
 
-const TIME_LIMIT = 30; // seconds
-const WORDS_TO_WIN = 5;
-
 const PickpocketGame = ({ onComplete }: PickpocketGameProps) => {
-  const [gameState, setGameState] = useState<'ready' | 'playing' | 'finished'>('ready');
-  const [currentWord, setCurrentWord] = useState('');
-  const [typedText, setTypedText] = useState('');
-  const [wordsCompleted, setWordsCompleted] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
-  const [mistakes, setMistakes] = useState(0);
+  const [gameState, setGameState] = useState<'ready' | 'playing' | 'success' | 'fail' | 'finished'>('ready');
+  const [currentStage, setCurrentStage] = useState(0);
+  const [position, setPosition] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [score, setScore] = useState(0);
+  const [stageResults, setStageResults] = useState<('perfect' | 'good' | 'miss')[]>([]);
+  const animationRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
 
-  const getRandomWord = useCallback(() => {
-    return WORDS[Math.floor(Math.random() * WORDS.length)];
-  }, []);
+  const stage = STAGES[currentStage];
+  const greenStart = 50 - stage.greenWidth / 2;
+  const greenEnd = 50 + stage.greenWidth / 2;
 
   const startGame = () => {
     setGameState('playing');
-    setCurrentWord(getRandomWord());
-    setTypedText('');
-    setWordsCompleted(0);
-    setTimeLeft(TIME_LIMIT);
-    setMistakes(0);
+    setCurrentStage(0);
+    setPosition(0);
+    setDirection(1);
     setScore(0);
+    setStageResults([]);
+    lastTimeRef.current = performance.now();
   };
 
+  const gameLoop = useCallback((timestamp: number) => {
+    const deltaTime = (timestamp - lastTimeRef.current) / 1000;
+    lastTimeRef.current = timestamp;
+
+    setPosition(prev => {
+      let newPos = prev + direction * stage.speed * deltaTime * 60;
+      if (newPos >= 100) {
+        newPos = 100;
+        setDirection(-1);
+      } else if (newPos <= 0) {
+        newPos = 0;
+        setDirection(1);
+      }
+      return newPos;
+    });
+
+    animationRef.current = requestAnimationFrame(gameLoop);
+  }, [direction, stage.speed]);
+
   useEffect(() => {
-    if (gameState !== 'playing') return;
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          setGameState('finished');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [gameState]);
-
-  useEffect(() => {
-    if (gameState !== 'playing') return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.length === 1 && e.key.match(/[a-züöä]/i)) {
-        const nextChar = currentWord[typedText.length];
-        if (e.key.toLowerCase() === nextChar?.toLowerCase()) {
-          const newTyped = typedText + e.key.toLowerCase();
-          setTypedText(newTyped);
-          
-          if (newTyped === currentWord) {
-            const wordScore = Math.ceil(timeLeft * 10 - mistakes * 5);
-            setScore(prev => prev + Math.max(wordScore, 10));
-            setWordsCompleted(prev => {
-              const newCount = prev + 1;
-              if (newCount >= WORDS_TO_WIN) {
-                setGameState('finished');
-              }
-              return newCount;
-            });
-            setTypedText('');
-            setCurrentWord(getRandomWord());
-          }
-        } else {
-          setMistakes(prev => prev + 1);
-        }
+    if (gameState === 'playing') {
+      lastTimeRef.current = performance.now();
+      animationRef.current = requestAnimationFrame(gameLoop);
+    }
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
       }
     };
+  }, [gameState, gameLoop]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, currentWord, typedText, timeLeft, mistakes, getRandomWord]);
+  const handleTap = () => {
+    if (gameState !== 'playing') return;
+    
+    haptics.mediumTap();
+    
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    const perfectStart = greenStart + stage.greenWidth * 0.35;
+    const perfectEnd = greenEnd - stage.greenWidth * 0.35;
+    
+    let result: 'perfect' | 'good' | 'miss';
+    let stageScore = 0;
+
+    if (position >= perfectStart && position <= perfectEnd) {
+      result = 'perfect';
+      stageScore = 100;
+      haptics.success();
+    } else if (position >= greenStart && position <= greenEnd) {
+      result = 'good';
+      stageScore = 50;
+      haptics.lightTap();
+    } else {
+      result = 'miss';
+      stageScore = 0;
+      haptics.error();
+    }
+
+    setScore(prev => prev + stageScore);
+    setStageResults(prev => [...prev, result]);
+
+    if (result === 'miss') {
+      setGameState('fail');
+    } else if (currentStage >= STAGES.length - 1) {
+      setGameState('success');
+    } else {
+      // Brief pause before next stage
+      setGameState('success');
+      setTimeout(() => {
+        setCurrentStage(prev => prev + 1);
+        setPosition(0);
+        setDirection(1);
+        setGameState('playing');
+        lastTimeRef.current = performance.now();
+      }, 600);
+    }
+  };
 
   const handleComplete = () => {
-    const won = wordsCompleted >= WORDS_TO_WIN;
+    const won = stageResults.length === STAGES.length && !stageResults.includes('miss');
     onComplete({
       score,
       won,
       effects: won 
-        ? { moneyDelta: score * 2, iqDelta: 2 }
+        ? { moneyDelta: score * 3, iqDelta: 2 }
         : { healthDelta: -5 }
     });
   };
@@ -111,14 +145,14 @@ const PickpocketGame = ({ onComplete }: PickpocketGameProps) => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-center text-muted-foreground">
-            Tippe die Wörter so schnell wie möglich, um den Taschendiebstahl erfolgreich durchzuführen!
+            Drücke im richtigen Moment, wenn der Balken im grünen Bereich ist!
           </p>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Tippe {WORDS_TO_WIN} Wörter in {TIME_LIMIT} Sekunden</li>
-            <li>• Fehler verringern deinen Score</li>
-            <li>• Schneller = mehr Beute!</li>
+            <li>• 3 Stufen mit steigender Schwierigkeit</li>
+            <li>• Treffe den grünen Bereich zum Erfolg</li>
+            <li>• Triff die Mitte für Perfekt-Bonus!</li>
           </ul>
-          <Button onClick={startGame} className="w-full">
+          <Button onClick={startGame} className="w-full touch-target">
             Starten
           </Button>
         </CardContent>
@@ -126,8 +160,8 @@ const PickpocketGame = ({ onComplete }: PickpocketGameProps) => {
     );
   }
 
-  if (gameState === 'finished') {
-    const won = wordsCompleted >= WORDS_TO_WIN;
+  if (gameState === 'fail' || (gameState === 'success' && currentStage >= STAGES.length - 1)) {
+    const won = !stageResults.includes('miss') && stageResults.length === STAGES.length;
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
@@ -140,22 +174,35 @@ const PickpocketGame = ({ onComplete }: PickpocketGameProps) => {
             <p className="text-4xl font-bold">{score}</p>
             <p className="text-muted-foreground">Punkte</p>
           </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="text-center p-2 bg-muted rounded">
-              <p className="font-bold">{wordsCompleted}/{WORDS_TO_WIN}</p>
-              <p className="text-xs text-muted-foreground">Wörter</p>
-            </div>
-            <div className="text-center p-2 bg-muted rounded">
-              <p className="font-bold">{mistakes}</p>
-              <p className="text-xs text-muted-foreground">Fehler</p>
-            </div>
+          
+          <div className="flex justify-center gap-2">
+            {STAGES.map((s, i) => (
+              <div 
+                key={i}
+                className={`w-16 h-16 rounded-lg flex flex-col items-center justify-center text-xs ${
+                  stageResults[i] === 'perfect' 
+                    ? 'bg-green-500/20 border-2 border-green-500' 
+                    : stageResults[i] === 'good'
+                      ? 'bg-yellow-500/20 border-2 border-yellow-500'
+                      : stageResults[i] === 'miss'
+                        ? 'bg-red-500/20 border-2 border-red-500'
+                        : 'bg-muted border-2 border-muted'
+                }`}
+              >
+                <span className="text-lg">
+                  {stageResults[i] === 'perfect' ? '⭐' : stageResults[i] === 'good' ? '✓' : stageResults[i] === 'miss' ? '✗' : '?'}
+                </span>
+                <span className="text-muted-foreground mt-1">Stufe {i + 1}</span>
+              </div>
+            ))}
           </div>
+
           {won ? (
-            <p className="text-center text-success">+€{score * 2} Beute, +2 IQ</p>
+            <p className="text-center text-green-500">+€{score * 3} Beute, +2 IQ</p>
           ) : (
             <p className="text-center text-destructive">-5 Gesundheit (Flucht)</p>
           )}
-          <Button onClick={handleComplete} className="w-full">
+          <Button onClick={handleComplete} className="w-full touch-target">
             Weiter
           </Button>
         </CardContent>
@@ -164,42 +211,86 @@ const PickpocketGame = ({ onComplete }: PickpocketGameProps) => {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto select-none">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium">Zeit: {timeLeft}s</span>
-          <span className="text-sm font-medium">{wordsCompleted}/{WORDS_TO_WIN} Wörter</span>
+          <span className="text-sm font-medium">Stufe {currentStage + 1}/3</span>
+          <span className="text-sm font-medium">Score: {score}</span>
         </div>
-        <Progress value={(timeLeft / TIME_LIMIT) * 100} className="h-2" />
+        <p className="text-center text-lg font-semibold text-primary mt-2">
+          {stage.name}
+        </p>
       </CardHeader>
-      <CardContent className="space-y-4 md:space-y-6 pt-4">
-        <div className="text-center">
-          <p className="text-2xl md:text-3xl font-mono tracking-wider">
-            {currentWord.split('').map((char, i) => (
-              <motion.span
+      <CardContent className="space-y-6 pt-4">
+        {/* Timing Bar */}
+        <div 
+          className="relative h-16 bg-muted rounded-lg overflow-hidden cursor-pointer touch-manipulation"
+          onClick={handleTap}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            handleTap();
+          }}
+        >
+          {/* Red zones */}
+          <div className="absolute inset-0 bg-red-500/30" />
+          
+          {/* Green zone */}
+          <div 
+            className="absolute top-0 bottom-0 bg-green-500/50"
+            style={{ 
+              left: `${greenStart}%`, 
+              width: `${stage.greenWidth}%` 
+            }}
+          />
+          
+          {/* Perfect zone (center of green) */}
+          <div 
+            className="absolute top-0 bottom-0 bg-green-400/70"
+            style={{ 
+              left: `${greenStart + stage.greenWidth * 0.35}%`, 
+              width: `${stage.greenWidth * 0.3}%` 
+            }}
+          />
+
+          {/* Moving indicator */}
+          <motion.div
+            className="absolute top-1 bottom-1 w-2 bg-white rounded-full shadow-lg shadow-white/50"
+            style={{ left: `calc(${position}% - 4px)` }}
+          />
+
+          {/* Stage indicators */}
+          <div className="absolute bottom-1 left-2 flex gap-1">
+            {STAGES.map((_, i) => (
+              <div 
                 key={i}
-                className={
-                  i < typedText.length 
-                    ? 'text-success' 
-                    : i === typedText.length 
-                      ? 'text-primary underline' 
-                      : 'text-muted-foreground'
-                }
-                initial={i === typedText.length - 1 ? { scale: 1.2 } : {}}
-                animate={{ scale: 1 }}
-              >
-                {char}
-              </motion.span>
+                className={`w-2 h-2 rounded-full ${
+                  i < currentStage 
+                    ? 'bg-green-500' 
+                    : i === currentStage 
+                      ? 'bg-white animate-pulse' 
+                      : 'bg-white/30'
+                }`}
+              />
             ))}
-          </p>
+          </div>
         </div>
-        <div className="text-center text-sm text-muted-foreground">
-          Tippe das Wort!
-        </div>
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Score: {score}</span>
-          <span>Fehler: {mistakes}</span>
-        </div>
+
+        {/* Large tap button for mobile */}
+        <Button 
+          onClick={handleTap}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            handleTap();
+          }}
+          className="w-full h-20 text-2xl font-bold touch-target touch-manipulation"
+          variant="default"
+        >
+          ZUGREIFEN!
+        </Button>
+
+        <p className="text-center text-xs text-muted-foreground">
+          Tippe wenn der Balken im grünen Bereich ist!
+        </p>
       </CardContent>
     </Card>
   );
