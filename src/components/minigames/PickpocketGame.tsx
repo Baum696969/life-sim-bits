@@ -6,6 +6,7 @@ import { haptics } from '@/lib/haptics';
 
 interface PickpocketGameProps {
   onComplete: (result: { score: number; won: boolean; effects: any }) => void;
+  playerMoney?: number;
 }
 
 interface Stage {
@@ -20,7 +21,10 @@ const STAGES: Stage[] = [
   { speed: 5.5, greenWidth: 12, name: 'Entkommen' },
 ];
 
-const PickpocketGame = ({ onComplete }: PickpocketGameProps) => {
+const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps) => {
+  // Speed multiplier based on player money: more money = faster (harder)
+  // Range: 0.6x (poor, €0) to 1.8x (rich, €100k+)
+  const speedMultiplier = Math.min(1.8, Math.max(0.6, 0.6 + (playerMoney / 100000) * 1.2));
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'success' | 'fail' | 'finished'>('ready');
   const [currentStage, setCurrentStage] = useState(0);
   const [position, setPosition] = useState(0);
@@ -49,7 +53,7 @@ const PickpocketGame = ({ onComplete }: PickpocketGameProps) => {
     lastTimeRef.current = timestamp;
 
     setPosition(prev => {
-      let newPos = prev + direction * stage.speed * deltaTime * 60;
+      let newPos = prev + direction * stage.speed * speedMultiplier * deltaTime * 60;
       if (newPos >= 100) {
         newPos = 100;
         setDirection(-1);
@@ -61,7 +65,7 @@ const PickpocketGame = ({ onComplete }: PickpocketGameProps) => {
     });
 
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [direction, stage.speed]);
+  }, [direction, stage.speed, speedMultiplier]);
 
   useEffect(() => {
     if (gameState === 'playing') {
