@@ -62,7 +62,7 @@ const MinigameModal = ({ isOpen, minigame, onComplete, onClose, playerMoney, pla
       case 'timesense':
         return <TimeSense onComplete={onComplete} playerAge={playerAge} />;
       case 'pickpocket':
-        return <PickpocketGame onComplete={onComplete} />;
+        return <PickpocketGame onComplete={onComplete} playerMoney={playerMoney} />;
       case 'stealth':
         return <StealthGame onComplete={onComplete} />;
       case 'fastfood':
