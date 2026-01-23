@@ -25,7 +25,7 @@ import { PropertyState, createPropertyState, Property, availableProperties } fro
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, addSibling, resetYearlyActivityUsage, canDoActivity, recordActivityUsage, getRandomExcuse, generateInitialFriends } from '@/lib/relationshipSystem';
+import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, addSibling, resetYearlyActivityUsage, canDoActivity, recordActivityUsage, getRandomExcuse, generateInitialFriends, generateNewFriend } from '@/lib/relationshipSystem';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { FriendActivity, friendActivities } from '@/types/relationship';
@@ -155,7 +155,31 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       eligibleEvents = eligibleEvents.filter(e => e.title !== 'Beförderung');
     }
 
-    const event = selectRandomEvent(eligibleEvents);
+    // Luck-based event selection: higher luck increases chance for positive events
+    const playerLuck = gameState.player.stats.luck;
+    const luckModifiedEvents = eligibleEvents.map(e => {
+      // Check if the event has any option with positive effects
+      const hasPositiveOption = e.options.some(opt => {
+        const effects = opt.effects || {};
+        const totalPositive = (effects.moneyDelta && effects.moneyDelta > 0 ? effects.moneyDelta : 0) +
+          (effects.luckDelta && effects.luckDelta > 0 ? effects.luckDelta * 100 : 0) +
+          (effects.healthDelta && effects.healthDelta > 0 ? effects.healthDelta * 50 : 0);
+        return totalPositive > 0;
+      });
+      
+      // Luck modifier: high luck (70+) increases weight of positive events
+      // Low luck (30-) decreases weight of positive events
+      let weightModifier = 1;
+      if (hasPositiveOption && playerLuck >= 70) {
+        weightModifier = 1 + (playerLuck - 50) / 100; // Up to 1.5x for luck 100
+      } else if (hasPositiveOption && playerLuck <= 30) {
+        weightModifier = 0.5 + playerLuck / 60; // Down to 0.5x for luck 0
+      }
+      
+      return { ...e, weight: e.weight * weightModifier };
+    });
+
+    const event = selectRandomEvent(luckModifiedEvents);
     soundManager.playEventAppear();
     setGameState(prev => ({ ...prev, currentEvent: event }));
     setSelectedOption(null);
@@ -226,6 +250,11 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       if (isAddSiblingEvent && option.label.includes('freu')) {
         handleAddSibling();
       }
+      
+      // Handle adding new friend from events
+      if (option.resultText && option.resultText.includes('[+1 Freund]')) {
+        handleAddFriendFromEvent();
+      }
     }
   };
 
@@ -240,6 +269,16 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
         family: newFamily
       }));
     }
+  };
+
+  const handleAddFriendFromEvent = () => {
+    const newFriend = generateNewFriend(gameState.player.age);
+    soundManager.playPositiveEffect();
+    toast.success(`Du hast ${newFriend.name} kennengelernt! 👥`);
+    setRelationshipState(prev => ({
+      ...prev,
+      friends: [...prev.friends, newFriend]
+    }));
   };
 
   const handleLottoResult = (won: boolean, amount: number) => {
