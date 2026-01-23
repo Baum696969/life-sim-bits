@@ -25,6 +25,10 @@ const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps)
   // Speed multiplier based on player money: more money = faster (harder)
   // Range: 0.6x (poor, €0) to 1.8x (rich, €100k+)
   const speedMultiplier = Math.min(1.8, Math.max(0.6, 0.6 + (playerMoney / 100000) * 1.2));
+  
+  // Number of stages based on money: €0-€999 = 1, €1000-€9999 = 2, €10000+ = 3
+  const stageCount = playerMoney < 1000 ? 1 : playerMoney < 10000 ? 2 : 3;
+  const activeStages = STAGES.slice(0, stageCount);
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'success' | 'fail' | 'finished'>('ready');
   const [currentStage, setCurrentStage] = useState(0);
   const [position, setPosition] = useState(0);
@@ -34,7 +38,7 @@ const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps)
   const animationRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
 
-  const stage = STAGES[currentStage];
+  const stage = activeStages[currentStage];
   const greenStart = 50 - stage.greenWidth / 2;
   const greenEnd = 50 + stage.greenWidth / 2;
 
@@ -113,7 +117,7 @@ const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps)
 
     if (result === 'miss') {
       setGameState('fail');
-    } else if (currentStage >= STAGES.length - 1) {
+    } else if (currentStage >= activeStages.length - 1) {
       setGameState('success');
     } else {
       // Brief pause before next stage
@@ -129,7 +133,7 @@ const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps)
   };
 
   const handleComplete = () => {
-    const won = stageResults.length === STAGES.length && !stageResults.includes('miss');
+    const won = stageResults.length === activeStages.length && !stageResults.includes('miss');
     onComplete({
       score,
       won,
@@ -152,7 +156,7 @@ const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps)
             Drücke im richtigen Moment, wenn der Balken im grünen Bereich ist!
           </p>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• 3 Stufen mit steigender Schwierigkeit</li>
+            <li>• {stageCount} {stageCount === 1 ? 'Stufe' : 'Stufen'} mit steigender Schwierigkeit</li>
             <li>• Treffe den grünen Bereich zum Erfolg</li>
             <li>• Triff die Mitte für Perfekt-Bonus!</li>
           </ul>
@@ -164,8 +168,8 @@ const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps)
     );
   }
 
-  if (gameState === 'fail' || (gameState === 'success' && currentStage >= STAGES.length - 1)) {
-    const won = !stageResults.includes('miss') && stageResults.length === STAGES.length;
+  if (gameState === 'fail' || (gameState === 'success' && currentStage >= activeStages.length - 1)) {
+    const won = !stageResults.includes('miss') && stageResults.length === activeStages.length;
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
@@ -180,7 +184,7 @@ const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps)
           </div>
           
           <div className="flex justify-center gap-2">
-            {STAGES.map((s, i) => (
+            {activeStages.map((s, i) => (
               <div 
                 key={i}
                 className={`w-16 h-16 rounded-lg flex flex-col items-center justify-center text-xs ${
@@ -218,7 +222,7 @@ const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps)
     <Card className="w-full max-w-md mx-auto select-none">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium">Stufe {currentStage + 1}/3</span>
+          <span className="text-sm font-medium">Stufe {currentStage + 1}/{stageCount}</span>
           <span className="text-sm font-medium">Score: {score}</span>
         </div>
         <p className="text-center text-lg font-semibold text-primary mt-2">
@@ -264,7 +268,7 @@ const PickpocketGame = ({ onComplete, playerMoney = 1000 }: PickpocketGameProps)
 
           {/* Stage indicators */}
           <div className="absolute bottom-1 left-2 flex gap-1">
-            {STAGES.map((_, i) => (
+            {activeStages.map((_, i) => (
               <div 
                 key={i}
                 className={`w-2 h-2 rounded-full ${
