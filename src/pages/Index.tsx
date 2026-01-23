@@ -12,7 +12,8 @@ const Index = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showGame, setShowGame] = useState(false);
   const [hasSave, setHasSave] = useState(false);
-  const [playerName, setPlayerName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [playerGender, setPlayerGender] = useState<'male' | 'female'>('male');
   const [showNameInput, setShowNameInput] = useState(false);
 
@@ -21,8 +22,9 @@ const Index = () => {
   }, []);
 
   const startNewGame = () => {
-    if (!playerName.trim()) return;
-    const player = createNewPlayer(playerName, playerGender);
+    if (!firstName.trim() || !lastName.trim()) return;
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
+    const player = createNewPlayer(fullName, playerGender);
     const state = createNewGameState(player);
     setGameState(state);
     setShowGame(true);
@@ -99,15 +101,24 @@ const Index = () => {
               exit={{ opacity: 0, scale: 0.9 }}
               className="space-y-4 mb-8"
             >
-              <input
-                type="text"
-                placeholder="Dein Name..."
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && startNewGame()}
-                className="w-full max-w-xs px-4 py-3 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all"
-                autoFocus
-              />
+              <div className="flex gap-2 max-w-xs mx-auto">
+                <input
+                  type="text"
+                  placeholder="Vorname..."
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="w-1/2 px-3 py-3 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all"
+                  autoFocus
+                />
+                <input
+                  type="text"
+                  placeholder="Nachname..."
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && startNewGame()}
+                  className="w-1/2 px-3 py-3 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all"
+                />
+              </div>
               
               {/* Gender Selection */}
               <div className="flex gap-4 justify-center">
@@ -137,7 +148,7 @@ const Index = () => {
               <div className="flex gap-3 justify-center">
                 <Button
                   onClick={startNewGame}
-                  disabled={!playerName.trim()}
+                  disabled={!firstName.trim() || !lastName.trim()}
                   className="game-btn bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-lg"
                 >
                   <Play className="mr-2 h-5 w-5" /> Starten
