@@ -856,72 +856,61 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-2 md:p-4 pb-20">
+    <div className="min-h-screen min-h-[100dvh] bg-background p-2 md:p-4 pb-28 md:pb-20">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onExit} className="text-muted-foreground h-8 w-8 md:h-10 md:w-10">
+        {/* Header - Compact on mobile */}
+        <div className="flex items-center justify-between mb-3 md:mb-6">
+          <div className="flex items-center gap-1 md:gap-2">
+            <Button variant="ghost" size="icon" onClick={onExit} className="text-muted-foreground h-9 w-9 md:h-10 md:w-10">
               <Home className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={toggleSound} className="text-muted-foreground h-8 w-8 md:h-10 md:w-10">
+            <Button variant="ghost" size="icon" onClick={toggleSound} className="text-muted-foreground h-9 w-9 md:h-10 md:w-10">
               {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             </Button>
-            <Button variant="ghost" size="icon" onClick={goToCasino} className="text-muted-foreground h-8 w-8 md:h-10 md:w-10" title="Casino">
+            <Button variant="ghost" size="icon" onClick={goToCasino} className="text-muted-foreground h-9 w-9 md:h-10 md:w-10" title="Casino">
               <Coins className="h-4 w-4" />
             </Button>
-            {/* Job Button - only show after school */}
             {gameState.player.age > 16 + gameState.player.extraSchoolYears && !gameState.player.inPrison && (
               <Button 
-                variant="ghost" 
-                size="icon" 
+                variant="ghost" size="icon" 
                 onClick={() => setShowJobModal(true)} 
-                className="text-muted-foreground h-8 w-8 md:h-10 md:w-10"
+                className="text-muted-foreground h-9 w-9 md:h-10 md:w-10"
                 title="Jobsuche"
               >
                 <Briefcase className="h-4 w-4" />
               </Button>
             )}
-            {/* Crime Button - 18+ only */}
             {canAccessCrime && (
               <Button 
-                variant="ghost" 
-                size="icon" 
+                variant="ghost" size="icon" 
                 onClick={() => setShowCrimeModal(true)} 
-                className="text-destructive h-8 w-8 md:h-10 md:w-10"
+                className="text-destructive h-9 w-9 md:h-10 md:w-10"
                 title="Kriminalität"
               >
                 <Skull className="h-4 w-4" />
               </Button>
             )}
-            {/* Relationship Button - 16+ */}
             {canAccessRelationship && (
               <Button 
-                variant="ghost" 
-                size="icon" 
+                variant="ghost" size="icon" 
                 onClick={() => setShowRelationshipModal(true)} 
-                className="text-pink-500 h-8 w-8 md:h-10 md:w-10"
+                className="text-pink-500 h-9 w-9 md:h-10 md:w-10"
                 title="Beziehungen"
               >
                 <Heart className="h-4 w-4" />
               </Button>
             )}
           </div>
-          <div className="text-center">
-            <h2 className="font-display text-lg md:text-2xl text-primary">{gameState.player.name}</h2>
-            <p className="text-xs md:text-sm text-muted-foreground">
-              Alter: {gameState.player.age} | Jahr: {gameState.year}
+          <div className="text-right min-w-0">
+            <h2 className="font-display text-sm md:text-2xl text-primary truncate">{gameState.player.name}</h2>
+            <p className="text-xs text-muted-foreground">
+              {gameState.player.age}J | {formatMoney(gameState.player.money)}
             </p>
-          </div>
-          <div className="text-right">
-            <span className="text-lg md:text-2xl font-bold text-primary">
-              {formatMoney(gameState.player.money)}
-            </span>
           </div>
         </div>
 
         {/* Main Layout - Mobile optimized */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-6">
           {/* Stats - Collapsible on mobile */}
           <div className="lg:col-span-3 order-2 lg:order-1">
             <StatsPanel stats={gameState.player.stats} />
@@ -951,11 +940,11 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="mt-4 text-center"
+                className="mt-3 md:mt-4 text-center"
               >
                 <Button
                   onClick={advanceYear}
-                  className="game-btn bg-primary text-primary-foreground px-6 md:px-8 py-3 md:py-4 text-base md:text-lg w-full md:w-auto"
+                  className="game-btn bg-primary text-primary-foreground px-6 md:px-8 py-4 md:py-4 text-base md:text-lg w-full md:w-auto min-h-[52px]"
                 >
                   Nächstes Jahr <ChevronRight className="ml-2" />
                 </Button>

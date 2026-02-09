@@ -32,7 +32,7 @@ const EventPanel = ({ event, onOptionSelect, selectedOption, showResult }: Event
               transition={{ delay: index * 0.1 }}
               onClick={() => onOptionSelect(option)}
               onMouseEnter={() => soundManager.playHover()}
-              className="event-option w-full text-left p-3 md:p-4"
+              className="event-option w-full text-left p-4 md:p-4 min-h-[48px] active:scale-[0.98] transition-transform"
             >
               <span className="font-medium text-sm md:text-base text-foreground">{option.label}</span>
               {option.minigame && (

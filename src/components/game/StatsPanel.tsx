@@ -38,7 +38,7 @@ const StatBar = ({
 );
 
 const StatsPanel = ({ stats }: StatsPanelProps) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="bg-card rounded-lg p-3 md:p-4 card-glow">
