@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, RotateCcw, Settings, DollarSign, Download } from 'lucide-react';
+import { Play, RotateCcw, Settings, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { hasSavedGame, loadGame, createNewPlayer, createNewGameState, clearSave } from '@/lib/gameUtils';
 import GameScreen from '@/components/game/GameScreen';
@@ -49,7 +49,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-primary/5" />
       <div className="absolute inset-0 opacity-30">
@@ -81,13 +81,13 @@ const Index = () => {
       >
         {/* Logo */}
         <motion.h1
-          className="font-display text-6xl md:text-8xl font-black text-primary text-glow mb-4"
+          className="font-display text-5xl md:text-8xl font-black text-primary text-glow mb-2 md:mb-4"
           animate={{ scale: [1, 1.02, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
           GitLife
         </motion.h1>
-        <p className="text-muted-foreground text-lg md:text-xl mb-12 font-mono">
+        <p className="text-muted-foreground text-base md:text-xl mb-8 md:mb-12 font-mono px-2">
           Lebe dein virtuelles Leben. Jede Entscheidung zählt.
         </p>
 
@@ -101,13 +101,13 @@ const Index = () => {
               exit={{ opacity: 0, scale: 0.9 }}
               className="space-y-4 mb-8"
             >
-              <div className="flex gap-2 max-w-xs mx-auto">
+              <div className="flex gap-2 max-w-sm mx-auto px-2">
                 <input
                   type="text"
                   placeholder="Vorname..."
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="w-1/2 px-3 py-3 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all"
+                  className="w-1/2 px-3 py-4 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all text-base"
                   autoFocus
                 />
                 <input
@@ -116,32 +116,34 @@ const Index = () => {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && startNewGame()}
-                  className="w-1/2 px-3 py-3 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all"
+                  className="w-1/2 px-3 py-4 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all text-base"
                 />
               </div>
               
               {/* Gender Selection */}
-              <div className="flex gap-4 justify-center">
+              <div className="flex gap-4 justify-center px-2">
                 <button
                   onClick={() => setPlayerGender('male')}
-                  className={`px-6 py-3 rounded-lg border-2 transition-all ${
+                  className={`flex-1 max-w-[140px] px-4 py-4 rounded-lg border-2 transition-all active:scale-95 ${
                     playerGender === 'male' 
                       ? 'border-blue-500 bg-blue-500/20 text-blue-400' 
                       : 'border-muted-foreground/30 text-muted-foreground hover:border-blue-500/50'
                   }`}
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
-                  <span className="text-2xl">👨</span>
+                  <span className="text-3xl">👨</span>
                   <p className="text-sm mt-1">Männlich</p>
                 </button>
                 <button
                   onClick={() => setPlayerGender('female')}
-                  className={`px-6 py-3 rounded-lg border-2 transition-all ${
+                  className={`flex-1 max-w-[140px] px-4 py-4 rounded-lg border-2 transition-all active:scale-95 ${
                     playerGender === 'female' 
                       ? 'border-pink-500 bg-pink-500/20 text-pink-400' 
                       : 'border-muted-foreground/30 text-muted-foreground hover:border-pink-500/50'
                   }`}
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
-                  <span className="text-2xl">👩</span>
+                  <span className="text-3xl">👩</span>
                   <p className="text-sm mt-1">Weiblich</p>
                 </button>
               </div>
@@ -172,7 +174,7 @@ const Index = () => {
             >
               <Button
                 onClick={handleNewGameClick}
-                className="game-btn bg-primary text-primary-foreground hover:bg-primary/90 px-10 py-7 text-xl w-64"
+                className="game-btn bg-primary text-primary-foreground hover:bg-primary/90 px-10 py-7 text-xl w-72 max-w-full"
               >
                 <Play className="mr-2 h-6 w-6" /> Neues Leben
               </Button>
@@ -181,13 +183,13 @@ const Index = () => {
                 <Button
                   onClick={continueGame}
                   variant="outline"
-                  className="game-btn border-2 border-primary text-primary hover:bg-primary/10 px-10 py-7 text-xl w-64"
+                  className="game-btn border-2 border-primary text-primary hover:bg-primary/10 px-10 py-7 text-xl w-72 max-w-full"
                 >
                   <RotateCcw className="mr-2 h-6 w-6" /> Fortsetzen
                 </Button>
               )}
 
-              <div className="flex gap-3 mt-4">
+              <div className="flex gap-3 mt-4 flex-wrap justify-center">
                 <Link to="/casino">
                   <Button
                     variant="ghost"
@@ -196,11 +198,8 @@ const Index = () => {
                     <DollarSign className="mr-2 h-5 w-5" /> Casino
                   </Button>
                 </Link>
-                <Link to="/download">
-                  <Button variant="ghost" className="text-muted-foreground hover:text-primary">
-                    <Download className="mr-2 h-5 w-5" /> Download
-                  </Button>
-                </Link>
+
+
                 <ChangelogModal />
                 <Link to="/settings">
                   <Button
@@ -220,7 +219,7 @@ const Index = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 text-center"
+          className="mt-8 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 text-center px-2"
         >
           {[
             { icon: '🎮', label: 'Minigames' },
