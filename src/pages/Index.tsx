@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { hasSavedGame, loadGame, createNewPlayer, createNewGameState, clearSave } from '@/lib/gameUtils';
 import GameScreen from '@/components/game/GameScreen';
 import ChangelogModal from '@/components/game/ChangelogModal';
+import SplashScreen from '@/components/game/SplashScreen';
+import LifeArchivePanel from '@/components/game/LifeArchivePanel';
 import { GameState } from '@/types/game';
 import { Link } from 'react-router-dom';
 
@@ -16,6 +18,7 @@ const Index = () => {
   const [lastName, setLastName] = useState('');
   const [playerGender, setPlayerGender] = useState<'male' | 'female'>('male');
   const [showNameInput, setShowNameInput] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     setHasSave(hasSavedGame());
@@ -43,6 +46,10 @@ const Index = () => {
     clearSave();
     setShowNameInput(true);
   };
+
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
 
   if (showGame && gameState) {
     return <GameScreen initialState={gameState} onExit={() => setShowGame(false)} />;
@@ -233,6 +240,9 @@ const Index = () => {
             </div>
           ))}
         </motion.div>
+
+        {/* Life Archive */}
+        <LifeArchivePanel />
       </motion.div>
     </div>
   );
