@@ -122,9 +122,9 @@ export const seedEvents: GameEvent[] = [
     maxAge: 12,
     category: 'social',
     weight: 1.3,
-    tags: ['school', 'social'],
+    tags: ['school', 'social', 'friends'],
     options: [
-      opt('Freundschaft anbieten', { luckDelta: 5, healthDelta: 2 }, 'Ihr werdet beste Freunde!'),
+      opt('Freundschaft anbieten', { luckDelta: 5, healthDelta: 2 }, 'Ihr werdet beste Freunde! [+1 Freund]'),
       opt('Ignorieren', { luckDelta: -2 }, 'Du verpasst die Chance auf eine Freundschaft.'),
       opt('Ärgern', { luckDelta: -5, looksDelta: -2 }, 'Andere Kinder finden das nicht cool.'),
     ],
