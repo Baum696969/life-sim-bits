@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GameState, GameEvent, EventOption, Job } from '@/types/game';
 import { getEventsForAge, selectRandomEvent } from '@/data/seedEvents';
@@ -31,6 +31,10 @@ import { toast } from 'sonner';
 import { FriendActivity, friendActivities } from '@/types/relationship';
 import StudentJobInterviewModal from './StudentJobInterviewModal';
 import { getPrisonEvents } from '@/lib/crimeSystem';
+import { saveLifeToArchive } from '@/lib/lifeArchive';
+
+// Tags that mark unique-per-life events (can only trigger once)
+const UNIQUE_EVENT_TAGS = ['milestone', 'club', 'driving'];
 
 interface GameScreenProps {
   initialState: GameState;
@@ -62,7 +66,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   );
   const [pregnancyState, setPregnancyState] = useState<PregnancyState>(createPregnancyState);
   const [propertyState, setPropertyState] = useState<PropertyState>(createPropertyState);
-
+  const [usedEventIds] = useState<Set<string>>(() => new Set());
   // Start ambient music on mount
   useEffect(() => {
     if (soundEnabled) {
@@ -150,6 +154,12 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
 
     let eligibleEvents = getEventsForAge(allEvents, gameState.player.age);
 
+    // Filter out unique events already triggered this life
+    eligibleEvents = eligibleEvents.filter(e => {
+      const isUnique = e.tags?.some(t => UNIQUE_EVENT_TAGS.includes(t));
+      return !isUnique || !usedEventIds.has(e.id);
+    });
+
     // Consistency rule: promotion only if the player has a job
     if (!gameState.player.job) {
       eligibleEvents = eligibleEvents.filter(e => e.title !== 'Beförderung');
@@ -199,8 +209,11 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
     soundManager.playClick();
     setSelectedOption(option);
 
-    // Check for special event tags
+    // Track unique event as used
     const activeEvent = gameState.currentEvent;
+    if (activeEvent?.tags?.some(t => UNIQUE_EVENT_TAGS.includes(t))) {
+      usedEventIds.add(activeEvent.id);
+    }
     const isLottoEvent = activeEvent?.tags?.includes('lotto') && option.label.includes('kaufen');
     const isAddSiblingEvent = activeEvent?.tags?.includes('add_sibling');
 
@@ -342,6 +355,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
 
     if (isDead) {
       soundManager.playGameOver();
+      saveLifeToArchive(newPlayer, [timelineEvent, ...gameState.timeline], gameState.currentEvent?.title || 'Unbekannt');
     }
 
     setShowResult(true);
@@ -460,6 +474,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       selectNextEvent();
     } else {
       soundManager.playGameOver();
+      saveLifeToArchive(agedPlayer, gameState.timeline, 'Natürlicher Tod');
     }
   };
 

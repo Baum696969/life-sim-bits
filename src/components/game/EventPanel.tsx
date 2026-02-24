@@ -1,3 +1,4 @@
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { GameEvent, EventOption } from '@/types/game';
 import { formatEffects } from '@/lib/gameUtils';
@@ -10,7 +11,18 @@ interface EventPanelProps {
   showResult: boolean;
 }
 
+const shuffleArray = <T,>(arr: T[]): T[] => {
+  const shuffled = [...arr];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 const EventPanel = ({ event, onOptionSelect, selectedOption, showResult }: EventPanelProps) => {
+  // Shuffle options once per event
+  const shuffledOptions = useMemo(() => shuffleArray(event.options), [event.id]);
   return (
     <div className="bg-card rounded-lg p-4 md:p-6 card-glow">
       <div className="mb-2">
@@ -24,7 +36,7 @@ const EventPanel = ({ event, onOptionSelect, selectedOption, showResult }: Event
 
       {!showResult ? (
         <div className="space-y-2 md:space-y-3">
-          {event.options.map((option, index) => (
+          {shuffledOptions.map((option, index) => (
             <motion.button
               key={option.id}
               initial={{ opacity: 0, x: -20 }}
