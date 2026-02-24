@@ -25,7 +25,7 @@ import { PropertyState, createPropertyState, Property, availableProperties } fro
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Home, Volume2, VolumeX, Coins, Briefcase, Skull, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, addSibling, resetYearlyActivityUsage, canDoActivity, recordActivityUsage, getRandomExcuse, generateInitialFriends, generateNewFriend } from '@/lib/relationshipSystem';
+import { createRelationshipState, generateChild, ageChildren, ageFamily, doFamilyActivity, addSibling, resetYearlyActivityUsage, canDoActivity, recordActivityUsage, getRandomExcuse, generateInitialFriends, generateNewFriend, generateFriendName } from '@/lib/relationshipSystem';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { FriendActivity, friendActivities } from '@/types/relationship';
@@ -67,6 +67,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   const [pregnancyState, setPregnancyState] = useState<PregnancyState>(createPregnancyState);
   const [propertyState, setPropertyState] = useState<PropertyState>(createPropertyState);
   const [usedEventIds] = useState<Set<string>>(() => new Set());
+  const [pendingFriendName, setPendingFriendName] = useState<string | null>(null);
   // Start ambient music on mount
   useEffect(() => {
     if (soundEnabled) {
@@ -189,7 +190,43 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       return { ...e, weight: e.weight * weightModifier };
     });
 
-    const event = selectRandomEvent(luckModifiedEvents);
+    let event = selectRandomEvent(luckModifiedEvents);
+    
+    // Inject a real name into friend-related events
+    if (event && event.tags?.includes('friends')) {
+      const friendName = generateFriendName();
+      setPendingFriendName(friendName);
+      event = {
+        ...event,
+        text: event.text.replace(/Ein neuer Schüler|Jemand|Eine Person|Ein Typ|Eine Frau/i, friendName),
+        options: event.options.map(o => ({
+          ...o,
+          resultText: o.resultText
+            .replace(/Ihr werdet beste Freunde/i, `Du und ${friendName} werdet beste Freunde`)
+            .replace(/werdet Freunde/i, `werdet Freunde`)
+            .replace(/gute Freunde/i, `gute Freunde`)
+            .replace(/\[?\+1 Freund\]?/, `${friendName} ist jetzt dein Freund!`),
+        })),
+      };
+      // Ensure at least one option has the friend marker
+      const hasFriendOption = event.options.some(o => o.resultText.includes('ist jetzt dein Freund'));
+      if (!hasFriendOption) {
+        // Add friend tag to the first positive option
+        const positiveIdx = event.options.findIndex(o => {
+          const total = (o.effects.luckDelta || 0) + (o.effects.healthDelta || 0);
+          return total > 0;
+        });
+        if (positiveIdx >= 0) {
+          event.options[positiveIdx] = {
+            ...event.options[positiveIdx],
+            resultText: event.options[positiveIdx].resultText + ` ${friendName} ist jetzt dein Freund!`,
+          };
+        }
+      }
+    } else {
+      setPendingFriendName(null);
+    }
+
     soundManager.playEventAppear();
     setGameState(prev => ({ ...prev, currentEvent: event }));
     setSelectedOption(null);
@@ -265,7 +302,7 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       }
       
       // Handle adding new friend from events
-      if (option.resultText && option.resultText.includes('[+1 Freund]')) {
+      if (option.resultText && (option.resultText.includes('[+1 Freund]') || option.resultText.includes('ist jetzt dein Freund'))) {
         handleAddFriendFromEvent();
       }
     }
@@ -285,13 +322,14 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
   };
 
   const handleAddFriendFromEvent = () => {
-    const newFriend = generateNewFriend(gameState.player.age);
+    const newFriend = generateNewFriend(gameState.player.age, pendingFriendName || undefined);
     soundManager.playPositiveEffect();
-    toast.success(`Du hast ${newFriend.name} kennengelernt! 👥`);
+    toast.success(`${newFriend.name} ist jetzt dein Freund! 👥`);
     setRelationshipState(prev => ({
       ...prev,
       friends: [...prev.friends, newFriend]
     }));
+    setPendingFriendName(null);
   };
 
   const handleLottoResult = (won: boolean, amount: number) => {

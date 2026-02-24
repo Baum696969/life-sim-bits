@@ -313,8 +313,15 @@ export const getFriendshipLevel = (friendship: number): Friend['level'] => {
   return 'acquaintance';
 };
 
+// Generate a random friend name
+export const generateFriendName = (): string => {
+  const gender: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female';
+  const names = friendNames[gender];
+  return names[Math.floor(Math.random() * names.length)];
+};
+
 // Generate a new friend
-export const generateNewFriend = (playerAge: number): Friend => {
+export const generateNewFriend = (playerAge: number, forcedName?: string): Friend => {
   const gender: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female';
   const names = friendNames[gender];
   const meetPlaces = ['Party', 'Arbeit', 'Online', 'Fitnessstudio', 'Café', 'Konzert', 'Uni'];
@@ -322,7 +329,7 @@ export const generateNewFriend = (playerAge: number): Friend => {
   
   return {
     id: `friend-${Date.now()}-${Math.random()}`,
-    name: names[Math.floor(Math.random() * names.length)],
+    name: forcedName || names[Math.floor(Math.random() * names.length)],
     gender,
     age: playerAge + Math.floor(Math.random() * 10) - 5,
     friendship,
