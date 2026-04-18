@@ -32,6 +32,7 @@ import { FriendActivity, friendActivities } from '@/types/relationship';
 import StudentJobInterviewModal from './StudentJobInterviewModal';
 import { getPrisonEvents } from '@/lib/crimeSystem';
 import { saveLifeToArchive } from '@/lib/lifeArchive';
+import { getLifePhaseInfo } from '@/lib/lifePhases';
 
 // Tags that mark unique-per-life events (can only trigger once)
 const UNIQUE_EVENT_TAGS = ['milestone', 'club', 'driving'];
@@ -954,11 +955,21 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
               </Button>
             )}
           </div>
-          <div className="text-right min-w-0">
-            <h2 className="font-display text-sm md:text-2xl text-primary truncate">{gameState.player.name}</h2>
-            <p className="text-xs text-muted-foreground">
-              {gameState.player.age}J | {formatMoney(gameState.player.money)}
-            </p>
+          <div className="flex items-center gap-2 min-w-0">
+            <img
+              src={getLifePhaseInfo(gameState.player.age).image}
+              alt={getLifePhaseInfo(gameState.player.age).label}
+              className="w-9 h-9 md:w-12 md:h-12 rounded-full object-cover border-2 border-primary/50 shadow-[0_0_10px_hsl(var(--primary)/0.4)] flex-shrink-0"
+              width={48}
+              height={48}
+              loading="lazy"
+            />
+            <div className="text-right min-w-0">
+              <h2 className="font-display text-sm md:text-2xl text-primary truncate">{gameState.player.name}</h2>
+              <p className="text-xs text-muted-foreground">
+                {gameState.player.age}J | {formatMoney(gameState.player.money)}
+              </p>
+            </div>
           </div>
         </div>
 

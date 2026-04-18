@@ -9,6 +9,7 @@ import SplashScreen from '@/components/game/SplashScreen';
 import LifeArchivePanel from '@/components/game/LifeArchivePanel';
 import { GameState } from '@/types/game';
 import { Link } from 'react-router-dom';
+import logo from '@/assets/gitlife-logo.png';
 
 const Index = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -87,13 +88,15 @@ const Index = () => {
         className="relative z-10 text-center"
       >
         {/* Logo */}
-        <motion.h1
-          className="font-display text-5xl md:text-8xl font-black text-primary text-glow mb-2 md:mb-4"
-          animate={{ scale: [1, 1.02, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          GitLife
-        </motion.h1>
+        <motion.img
+          src={logo}
+          alt="GitLife - Dein Leben Simulator"
+          className="mx-auto w-64 md:w-96 h-auto mb-2 md:mb-4 drop-shadow-[0_0_25px_hsl(var(--primary)/0.5)]"
+          animate={{ scale: [1, 1.03, 1] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          width={400}
+          height={400}
+        />
         <p className="text-muted-foreground text-base md:text-xl mb-8 md:mb-12 font-mono px-2">
           Lebe dein virtuelles Leben. Jede Entscheidung zählt.
         </p>
