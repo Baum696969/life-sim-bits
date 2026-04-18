@@ -32,6 +32,7 @@ import { FriendActivity, friendActivities } from '@/types/relationship';
 import StudentJobInterviewModal from './StudentJobInterviewModal';
 import { getPrisonEvents } from '@/lib/crimeSystem';
 import { saveLifeToArchive } from '@/lib/lifeArchive';
+import { getLifePhaseInfo } from '@/lib/lifePhases';
 
 // Tags that mark unique-per-life events (can only trigger once)
 const UNIQUE_EVENT_TAGS = ['milestone', 'club', 'driving'];
