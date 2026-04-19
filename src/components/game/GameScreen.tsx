@@ -468,11 +468,14 @@ const GameScreen = ({ initialState, onExit }: GameScreenProps) => {
       
       // Check for parent death notifications
       if (prev.family && agedFamily) {
-        if (prev.family.mother.isAlive && !agedFamily.mother.isAlive) {
+        if (prev.family.mother?.isAlive && agedFamily.mother && !agedFamily.mother.isAlive) {
           toast.error(`Deine Mutter ${prev.family.mother.name} ist verstorben. 😢`);
         }
-        if (prev.family.father.isAlive && !agedFamily.father.isAlive) {
+        if (prev.family.father?.isAlive && agedFamily.father && !agedFamily.father.isAlive) {
           toast.error(`Dein Vater ${prev.family.father.name} ist verstorben. 😢`);
+        }
+        if (prev.family.secondParent?.isAlive && agedFamily.secondParent && !agedFamily.secondParent.isAlive) {
+          toast.error(`${prev.family.secondParent.name} ist verstorben. 😢`);
         }
       }
       

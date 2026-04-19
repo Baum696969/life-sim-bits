@@ -211,14 +211,33 @@ const RelationshipModal = ({
                 >
                   {family ? (
                     <>
-                      {/* Parents */}
-                      <div className="space-y-2">
-                        <h3 className="text-sm font-medium text-muted-foreground">Eltern</h3>
-                        <div className="grid gap-2">
-                          {renderFamilyMember(family.mother, 'Mutter')}
-                          {renderFamilyMember(family.father, 'Vater')}
-                        </div>
+                      {/* Family type tag */}
+                      <div className="text-center">
+                        <Badge variant="outline" className="text-xs">
+                          {family.familyType === 'classic' && 'Klassische Familie'}
+                          {family.familyType === 'singleMother' && 'Alleinerziehende Mutter'}
+                          {family.familyType === 'singleFather' && 'Alleinerziehender Vater'}
+                          {family.familyType === 'orphan' && 'Waisenkind'}
+                          {family.familyType === 'adopted' && 'Adoptiert'}
+                          {family.familyType === 'sameSexMothers' && 'Zwei Mütter'}
+                          {family.familyType === 'sameSexFathers' && 'Zwei Väter'}
+                        </Badge>
                       </div>
+
+                      {/* Parents */}
+                      {(family.mother || family.father || family.secondParent) && (
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-medium text-muted-foreground">Eltern</h3>
+                          <div className="grid gap-2">
+                            {family.mother && renderFamilyMember(family.mother, family.familyType === 'sameSexMothers' ? 'Mutter' : 'Mutter')}
+                            {family.father && renderFamilyMember(family.father, 'Vater')}
+                            {family.secondParent && renderFamilyMember(
+                              family.secondParent,
+                              family.familyType === 'sameSexMothers' ? 'Zweite Mutter' : 'Zweiter Vater'
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Siblings */}
                       {family.siblings.length > 0 && (
@@ -232,6 +251,14 @@ const RelationshipModal = ({
                             )}
                           </div>
                         </div>
+                      )}
+
+                      {family.familyType === 'orphan' && (
+                        <Card className="bg-background/50 border-muted">
+                          <CardContent className="p-4 text-center text-muted-foreground text-sm">
+                            Du bist als Waisenkind aufgewachsen.
+                          </CardContent>
+                        </Card>
                       )}
 
                       <p className="text-xs text-muted-foreground text-center">
