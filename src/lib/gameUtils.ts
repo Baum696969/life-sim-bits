@@ -4,30 +4,49 @@ const generateId = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-export const createNewPlayer = (name: string, gender: 'male' | 'female' = 'male'): Player => {
+export interface NewPlayerOptions {
+  skinTone?: string;
+  country?: string;
+  statBonus?: Partial<{ iq: number; health: number; fitness: number; looks: number; luck: number }> & { money?: number };
+  tags?: string[];
+}
+
+export const createNewPlayer = (
+  name: string,
+  gender: 'male' | 'female' = 'male',
+  options: NewPlayerOptions = {}
+): Player => {
   const currentYear = new Date().getFullYear();
   const birthYear = currentYear;
-  
+  const b = options.statBonus ?? {};
+
+  const baseStats: PlayerStats = {
+    iq: 50 + Math.floor(Math.random() * 30),
+    health: 80 + Math.floor(Math.random() * 20),
+    fitness: 50 + Math.floor(Math.random() * 30),
+    looks: 30 + Math.floor(Math.random() * 50),
+    luck: 30 + Math.floor(Math.random() * 40),
+  };
+
   return {
     id: generateId(),
     name,
     gender,
     birthYear,
     age: 0,
-    money: 0,
+    money: Math.max(0, b.money ?? 0),
     stats: {
-      iq: 50 + Math.floor(Math.random() * 30),
-      health: 80 + Math.floor(Math.random() * 20),
-      fitness: 50 + Math.floor(Math.random() * 30),
-      looks: 30 + Math.floor(Math.random() * 50),
-      luck: 30 + Math.floor(Math.random() * 40),
+      iq: clampStat(baseStats.iq + (b.iq ?? 0)),
+      health: clampStat(baseStats.health + (b.health ?? 0)),
+      fitness: clampStat(baseStats.fitness + (b.fitness ?? 0)),
+      looks: clampStat(baseStats.looks + (b.looks ?? 0)),
+      luck: clampStat(baseStats.luck + (b.luck ?? 0)),
     },
     job: null,
     education: 'kindergarten',
     relationship: null,
     isAlive: true,
     createdAt: Date.now(),
-    // New fields
     inSchool: false,
     schoolYearsCompleted: 0,
     hasNewspaperJob: false,
@@ -35,6 +54,9 @@ export const createNewPlayer = (name: string, gender: 'male' | 'female' = 'male'
     inPrison: false,
     prisonYearsRemaining: 0,
     extraSchoolYears: 0,
+    skinTone: options.skinTone ?? 'mediumLight',
+    country: options.country ?? 'DE',
+    tags: options.tags ?? [],
   };
 };
 

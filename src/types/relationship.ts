@@ -46,10 +46,22 @@ export interface FamilyMember {
   isAlive: boolean;
 }
 
+export type FamilyType =
+  | 'classic'        // mother + father
+  | 'singleMother'   // mother only
+  | 'singleFather'   // father only
+  | 'orphan'         // neither, raised in foster care/grandparents
+  | 'adopted'        // adoptive parents (still classic structure but tagged)
+  | 'sameSexMothers' // two mothers
+  | 'sameSexFathers'; // two fathers
+
 export interface FamilyState {
-  mother: FamilyMember;
-  father: FamilyMember;
+  mother: FamilyMember | null;
+  father: FamilyMember | null;
+  // Optional second parent for same-sex households
+  secondParent?: FamilyMember | null;
   siblings: FamilyMember[];
+  familyType: FamilyType;
 }
 
 export interface FamilyActivity {

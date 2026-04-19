@@ -21,16 +21,26 @@ const shuffleArray = <T,>(arr: T[]): T[] => {
 };
 
 const EventPanel = ({ event, onOptionSelect, selectedOption, showResult }: EventPanelProps) => {
-  // Shuffle options once per event
-  const shuffledOptions = useMemo(() => shuffleArray(event.options), [event.id]);
+  // Auto-events have a single "Weiter" option — keep order, otherwise shuffle
+  const isAuto = event.category === 'auto' || event.options.length <= 1;
+  const shuffledOptions = useMemo(
+    () => (isAuto ? event.options : shuffleArray(event.options)),
+    [event.id, isAuto]
+  );
+
   return (
     <div className="bg-card rounded-lg p-4 md:p-6 card-glow">
-      <div className="mb-2">
+      <div className="mb-2 flex items-center gap-2">
         <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
           {event.category}
         </span>
+        {isAuto && (
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-accent/20 text-accent uppercase">
+            Auto
+          </span>
+        )}
       </div>
-      
+
       <h2 className="font-display text-xl md:text-2xl text-primary mb-3 md:mb-4">{event.title}</h2>
       <p className="text-sm md:text-base text-foreground/90 mb-4 md:mb-6 leading-relaxed">{event.text}</p>
 
@@ -44,7 +54,9 @@ const EventPanel = ({ event, onOptionSelect, selectedOption, showResult }: Event
               transition={{ delay: index * 0.1 }}
               onClick={() => onOptionSelect(option)}
               onMouseEnter={() => soundManager.playHover()}
-              className="event-option w-full text-left p-4 md:p-4 min-h-[48px] active:scale-[0.98] transition-transform"
+              className={`event-option w-full text-left p-4 md:p-4 min-h-[48px] active:scale-[0.98] transition-transform ${
+                isAuto ? 'text-center bg-primary/10 border border-primary/40' : ''
+              }`}
             >
               <span className="font-medium text-sm md:text-base text-foreground">{option.label}</span>
               {option.minigame && (
@@ -67,8 +79,8 @@ const EventPanel = ({ event, onOptionSelect, selectedOption, showResult }: Event
               <span
                 key={i}
                 className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-mono ${
-                  effect.startsWith('+') 
-                    ? 'bg-success/20 text-success' 
+                  effect.startsWith('+')
+                    ? 'bg-success/20 text-success'
                     : 'bg-destructive/20 text-destructive'
                 }`}
               >

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, RotateCcw, Settings, DollarSign } from 'lucide-react';
+import { Play, RotateCcw, Settings, DollarSign, Dices } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { hasSavedGame, loadGame, createNewPlayer, createNewGameState, clearSave } from '@/lib/gameUtils';
 import GameScreen from '@/components/game/GameScreen';
@@ -10,6 +10,8 @@ import LifeArchivePanel from '@/components/game/LifeArchivePanel';
 import { GameState } from '@/types/game';
 import { Link } from 'react-router-dom';
 import logo from '@/assets/gitlife-logo.png';
+import { COUNTRIES, SKIN_TONES, getCountry, getSkinTone } from '@/lib/countries';
+import { randomFirstName, randomLastName } from '@/lib/randomNames';
 
 const Index = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -18,6 +20,8 @@ const Index = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [playerGender, setPlayerGender] = useState<'male' | 'female'>('male');
+  const [skinToneId, setSkinToneId] = useState<string>('mediumLight');
+  const [countryCode, setCountryCode] = useState<string>('DE');
   const [showNameInput, setShowNameInput] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
 
@@ -25,10 +29,18 @@ const Index = () => {
     setHasSave(hasSavedGame());
   }, []);
 
+  const country = getCountry(countryCode);
+  const skinTone = getSkinTone(skinToneId);
+
   const startNewGame = () => {
     if (!firstName.trim() || !lastName.trim()) return;
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
-    const player = createNewPlayer(fullName, playerGender);
+    const player = createNewPlayer(fullName, playerGender, {
+      skinTone: skinToneId,
+      country: countryCode,
+      statBonus: country.bonus,
+      tags: country.tags,
+    });
     const state = createNewGameState(player);
     setGameState(state);
     setShowGame(true);
@@ -46,6 +58,13 @@ const Index = () => {
   const handleNewGameClick = () => {
     clearSave();
     setShowNameInput(true);
+  };
+
+  const randomizeFirst = () => setFirstName(randomFirstName(countryCode, playerGender));
+  const randomizeLast = () => setLastName(randomLastName(countryCode));
+  const randomizeBoth = () => {
+    setFirstName(randomFirstName(countryCode, playerGender));
+    setLastName(randomLastName(countryCode));
   };
 
   if (showSplash) {
@@ -111,53 +130,126 @@ const Index = () => {
               exit={{ opacity: 0, scale: 0.9 }}
               className="space-y-4 mb-8"
             >
-              <div className="flex gap-2 max-w-sm mx-auto px-2">
-                <input
-                  type="text"
-                  placeholder="Vorname..."
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="w-1/2 px-3 py-4 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all text-base"
-                  autoFocus
-                />
-                <input
-                  type="text"
-                  placeholder="Nachname..."
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && startNewGame()}
-                  className="w-1/2 px-3 py-4 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary focus:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all text-base"
-                />
+              {/* Names with random dice */}
+              <div className="max-w-md mx-auto px-2 space-y-2">
+                <div className="flex gap-2 items-stretch">
+                  <input
+                    type="text"
+                    placeholder="Vorname..."
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="flex-1 px-3 py-3 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary transition-all text-base"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={randomizeFirst}
+                    title="Zufälliger Vorname"
+                    className="px-3 rounded-lg border-2 border-primary/50 bg-card text-primary hover:bg-primary/10 active:scale-95 transition-all"
+                  >
+                    <Dices className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="flex gap-2 items-stretch">
+                  <input
+                    type="text"
+                    placeholder="Nachname..."
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && startNewGame()}
+                    className="flex-1 px-3 py-3 bg-card border-2 border-primary/50 rounded-lg text-foreground font-mono text-center focus:outline-none focus:border-primary transition-all text-base"
+                  />
+                  <button
+                    type="button"
+                    onClick={randomizeLast}
+                    title="Zufälliger Nachname"
+                    className="px-3 rounded-lg border-2 border-primary/50 bg-card text-primary hover:bg-primary/10 active:scale-95 transition-all"
+                  >
+                    <Dices className="h-5 w-5" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={randomizeBoth}
+                  className="text-xs text-muted-foreground hover:text-primary underline w-full"
+                >
+                  🎲 Beides zufällig (passend zu {country.flag} {country.name})
+                </button>
               </div>
-              
+
               {/* Gender Selection */}
-              <div className="flex gap-4 justify-center px-2">
+              <div className="flex gap-3 justify-center px-2">
                 <button
                   onClick={() => setPlayerGender('male')}
-                  className={`flex-1 max-w-[140px] px-4 py-4 rounded-lg border-2 transition-all active:scale-95 ${
-                    playerGender === 'male' 
-                      ? 'border-blue-500 bg-blue-500/20 text-blue-400' 
+                  className={`flex-1 max-w-[140px] px-4 py-3 rounded-lg border-2 transition-all active:scale-95 ${
+                    playerGender === 'male'
+                      ? 'border-blue-500 bg-blue-500/20 text-blue-400'
                       : 'border-muted-foreground/30 text-muted-foreground hover:border-blue-500/50'
                   }`}
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
-                  <span className="text-3xl">👨</span>
-                  <p className="text-sm mt-1">Männlich</p>
+                  <span className="text-2xl">👨{skinTone.emojiModifier}</span>
+                  <p className="text-xs mt-1">Männlich</p>
                 </button>
                 <button
                   onClick={() => setPlayerGender('female')}
-                  className={`flex-1 max-w-[140px] px-4 py-4 rounded-lg border-2 transition-all active:scale-95 ${
-                    playerGender === 'female' 
-                      ? 'border-pink-500 bg-pink-500/20 text-pink-400' 
+                  className={`flex-1 max-w-[140px] px-4 py-3 rounded-lg border-2 transition-all active:scale-95 ${
+                    playerGender === 'female'
+                      ? 'border-pink-500 bg-pink-500/20 text-pink-400'
                       : 'border-muted-foreground/30 text-muted-foreground hover:border-pink-500/50'
                   }`}
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
-                  <span className="text-3xl">👩</span>
-                  <p className="text-sm mt-1">Weiblich</p>
+                  <span className="text-2xl">👩{skinTone.emojiModifier}</span>
+                  <p className="text-xs mt-1">Weiblich</p>
                 </button>
               </div>
-              <div className="flex gap-3 justify-center">
+
+              {/* Skin tone */}
+              <div className="px-2">
+                <p className="text-xs text-muted-foreground mb-2 text-center">Hautfarbe</p>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  {SKIN_TONES.map((tone) => (
+                    <button
+                      key={tone.id}
+                      type="button"
+                      onClick={() => setSkinToneId(tone.id)}
+                      title={tone.label}
+                      className={`w-10 h-10 rounded-full border-2 transition-all active:scale-90 ${
+                        skinToneId === tone.id ? 'border-primary scale-110 shadow-[0_0_15px_hsl(var(--primary)/0.5)]' : 'border-muted-foreground/30'
+                      }`}
+                      style={{ backgroundColor: tone.hex, WebkitTapHighlightColor: 'transparent' }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Birth country */}
+              <div className="px-2 max-w-md mx-auto">
+                <p className="text-xs text-muted-foreground mb-2 text-center">Geburtsland</p>
+                <div className="grid grid-cols-5 sm:grid-cols-7 gap-1.5 max-h-[140px] overflow-y-auto p-2 bg-card/50 rounded-lg border border-primary/20">
+                  {COUNTRIES.map((c) => (
+                    <button
+                      key={c.code}
+                      type="button"
+                      onClick={() => setCountryCode(c.code)}
+                      title={`${c.name} (${c.description})`}
+                      className={`p-1.5 rounded-md border transition-all active:scale-90 ${
+                        countryCode === c.code
+                          ? 'border-primary bg-primary/20 scale-110'
+                          : 'border-transparent hover:border-primary/40'
+                      }`}
+                    >
+                      <span className="text-xl">{c.flag}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-center mt-2 text-primary font-mono">
+                  {country.flag} {country.name} <span className="text-muted-foreground">— {country.description}</span>
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-center pt-2">
                 <Button
                   onClick={startNewGame}
                   disabled={!firstName.trim() || !lastName.trim()}
