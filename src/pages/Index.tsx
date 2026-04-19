@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, RotateCcw, Settings, DollarSign } from 'lucide-react';
+import { Play, RotateCcw, Settings, DollarSign, Dices } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { hasSavedGame, loadGame, createNewPlayer, createNewGameState, clearSave } from '@/lib/gameUtils';
 import GameScreen from '@/components/game/GameScreen';
@@ -10,6 +10,8 @@ import LifeArchivePanel from '@/components/game/LifeArchivePanel';
 import { GameState } from '@/types/game';
 import { Link } from 'react-router-dom';
 import logo from '@/assets/gitlife-logo.png';
+import { COUNTRIES, SKIN_TONES, getCountry, getSkinTone } from '@/lib/countries';
+import { randomFirstName, randomLastName } from '@/lib/randomNames';
 
 const Index = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -18,6 +20,8 @@ const Index = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [playerGender, setPlayerGender] = useState<'male' | 'female'>('male');
+  const [skinToneId, setSkinToneId] = useState<string>('mediumLight');
+  const [countryCode, setCountryCode] = useState<string>('DE');
   const [showNameInput, setShowNameInput] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
 
@@ -25,10 +29,18 @@ const Index = () => {
     setHasSave(hasSavedGame());
   }, []);
 
+  const country = getCountry(countryCode);
+  const skinTone = getSkinTone(skinToneId);
+
   const startNewGame = () => {
     if (!firstName.trim() || !lastName.trim()) return;
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
-    const player = createNewPlayer(fullName, playerGender);
+    const player = createNewPlayer(fullName, playerGender, {
+      skinTone: skinToneId,
+      country: countryCode,
+      statBonus: country.bonus,
+      tags: country.tags,
+    });
     const state = createNewGameState(player);
     setGameState(state);
     setShowGame(true);
@@ -46,6 +58,13 @@ const Index = () => {
   const handleNewGameClick = () => {
     clearSave();
     setShowNameInput(true);
+  };
+
+  const randomizeFirst = () => setFirstName(randomFirstName(countryCode, playerGender));
+  const randomizeLast = () => setLastName(randomLastName(countryCode));
+  const randomizeBoth = () => {
+    setFirstName(randomFirstName(countryCode, playerGender));
+    setLastName(randomLastName(countryCode));
   };
 
   if (showSplash) {
