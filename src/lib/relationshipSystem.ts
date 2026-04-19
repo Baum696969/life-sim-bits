@@ -120,89 +120,118 @@ export const ageChildren = (children: Child[]): Child[] => {
   }));
 };
 
-// Generate initial family (parents and possibly siblings)
+// Generate initial family with varied structures (parents and possibly siblings)
 export const generateFamily = (playerBirthYear: number): FamilyState => {
-  const motherName = parentNames.mother[Math.floor(Math.random() * parentNames.mother.length)];
-  const fatherName = parentNames.father[Math.floor(Math.random() * parentNames.father.length)];
-  
-  // Parents are 20-35 years older
-  const motherAge = 20 + Math.floor(Math.random() * 16);
-  const fatherAge = 22 + Math.floor(Math.random() * 16);
-  
-  const mother: FamilyMember = {
-    id: `mother-${Date.now()}`,
-    name: motherName,
-    role: 'mother',
-    gender: 'female',
-    age: motherAge,
-    relationship: 70 + Math.floor(Math.random() * 30),
-    isAlive: true
+  // Pick a family type with weights
+  const roll = Math.random();
+  let familyType: FamilyState['familyType'] = 'classic';
+  if (roll < 0.62) familyType = 'classic';
+  else if (roll < 0.74) familyType = 'singleMother';
+  else if (roll < 0.80) familyType = 'singleFather';
+  else if (roll < 0.86) familyType = 'adopted';
+  else if (roll < 0.92) familyType = 'sameSexMothers';
+  else if (roll < 0.96) familyType = 'sameSexFathers';
+  else familyType = 'orphan';
+
+  const buildMember = (role: 'mother' | 'father', gender: 'male' | 'female'): FamilyMember => {
+    const namePool = gender === 'female' ? parentNames.mother : parentNames.father;
+    const name = namePool[Math.floor(Math.random() * namePool.length)];
+    const age = 20 + Math.floor(Math.random() * 18);
+    return {
+      id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      role,
+      gender,
+      age,
+      relationship: 65 + Math.floor(Math.random() * 35),
+      isAlive: true,
+    };
   };
-  
-  const father: FamilyMember = {
-    id: `father-${Date.now()}`,
-    name: fatherName,
-    role: 'father',
-    gender: 'male',
-    age: fatherAge,
-    relationship: 70 + Math.floor(Math.random() * 30),
-    isAlive: true
-  };
-  
-  // 50% chance of having 1-3 siblings
-  const siblings: FamilyMember[] = [];
-  if (Math.random() > 0.5) {
-    const siblingCount = Math.floor(Math.random() * 3) + 1;
-    for (let i = 0; i < siblingCount; i++) {
-      const gender: 'male' | 'female' = Math.random() > 0.5 ? 'male' : 'female';
-      const names = siblingNames[gender];
-      const name = names[Math.floor(Math.random() * names.length)];
-      // Siblings are -5 to +10 years from player (can be older or younger)
-      const ageDiff = Math.floor(Math.random() * 16) - 5;
-      
-      siblings.push({
-        id: `sibling-${Date.now()}-${i}`,
-        name,
-        role: 'sibling',
-        gender,
-        age: Math.max(0, ageDiff), // Will be adjusted each year
-        relationship: 60 + Math.floor(Math.random() * 40),
-        isAlive: true
-      });
-    }
+
+  let mother: FamilyMember | null = null;
+  let father: FamilyMember | null = null;
+  let secondParent: FamilyMember | null = null;
+
+  switch (familyType) {
+    case 'classic':
+    case 'adopted':
+      mother = buildMember('mother', 'female');
+      father = buildMember('father', 'male');
+      break;
+    case 'singleMother':
+      mother = buildMember('mother', 'female');
+      break;
+    case 'singleFather':
+      father = buildMember('father', 'male');
+      break;
+    case 'sameSexMothers':
+      mother = buildMember('mother', 'female');
+      secondParent = buildMember('mother', 'female');
+      break;
+    case 'sameSexFathers':
+      father = buildMember('father', 'male');
+      secondParent = buildMember('father', 'male');
+      break;
+    case 'orphan':
+      // No parents
+      break;
   }
-  
-  return { mother, father, siblings };
+
+  // Sibling generation: variable count 0-4, occasional twin
+  const siblings: FamilyMember[] = [];
+  const siblingRoll = Math.random();
+  let siblingCount = 0;
+  if (siblingRoll < 0.30) siblingCount = 0;
+  else if (siblingRoll < 0.60) siblingCount = 1;
+  else if (siblingRoll < 0.85) siblingCount = 2;
+  else if (siblingRoll < 0.96) siblingCount = 3;
+  else siblingCount = 4;
+
+  for (let i = 0; i < siblingCount; i++) {
+    const gender: 'male' | 'female' = Math.random() > 0.5 ? 'male' : 'female';
+    const names = siblingNames[gender];
+    const name = names[Math.floor(Math.random() * names.length)];
+    // Twin chance for first sibling: 8%
+    const isTwin = i === 0 && Math.random() < 0.08;
+    const ageDiff = isTwin ? 0 : Math.floor(Math.random() * 16) - 5;
+
+    siblings.push({
+      id: `sibling-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 5)}`,
+      name,
+      role: 'sibling',
+      gender,
+      age: Math.max(0, ageDiff),
+      relationship: 55 + Math.floor(Math.random() * 45),
+      isAlive: true,
+    });
+  }
+
+  return { mother, father, secondParent, siblings, familyType };
 };
 
 // Age family members
 export const ageFamily = (family: FamilyState): FamilyState => {
-  const agedMother = { ...family.mother, age: family.mother.age + 1 };
-  const agedFather = { ...family.father, age: family.father.age + 1 };
-  
-  // Check if parents die (chance increases with age)
-  if (agedMother.isAlive && agedMother.age > 60) {
-    const deathChance = (agedMother.age - 60) * 0.02;
-    if (Math.random() < deathChance) {
-      agedMother.isAlive = false;
+  const ageParent = (p: FamilyMember | null | undefined, deathStartAge: number, factor: number): FamilyMember | null => {
+    if (!p) return p ?? null;
+    const aged = { ...p, age: p.age + 1 };
+    if (aged.isAlive && aged.age > deathStartAge) {
+      const deathChance = (aged.age - deathStartAge) * factor;
+      if (Math.random() < deathChance) aged.isAlive = false;
     }
-  }
-  if (agedFather.isAlive && agedFather.age > 58) {
-    const deathChance = (agedFather.age - 58) * 0.025;
-    if (Math.random() < deathChance) {
-      agedFather.isAlive = false;
-    }
-  }
-  
+    return aged;
+  };
+
   const agedSiblings = family.siblings.map(sibling => ({
     ...sibling,
-    age: sibling.age + 1
+    age: sibling.age + 1,
   }));
-  
+
   return {
-    mother: agedMother,
-    father: agedFather,
-    siblings: agedSiblings
+    ...family,
+    mother: ageParent(family.mother, 60, 0.02),
+    father: ageParent(family.father, 58, 0.025),
+    secondParent: ageParent(family.secondParent ?? null, 60, 0.022),
+    siblings: agedSiblings,
   };
 };
 
@@ -211,7 +240,7 @@ export const addSibling = (family: FamilyState): FamilyState => {
   const gender: 'male' | 'female' = Math.random() > 0.5 ? 'male' : 'female';
   const names = siblingNames[gender];
   const name = names[Math.floor(Math.random() * names.length)];
-  
+
   const newSibling: FamilyMember = {
     id: `sibling-${Date.now()}`,
     name,
@@ -219,12 +248,12 @@ export const addSibling = (family: FamilyState): FamilyState => {
     gender,
     age: 0,
     relationship: 50 + Math.floor(Math.random() * 30),
-    isAlive: true
+    isAlive: true,
   };
-  
+
   return {
     ...family,
-    siblings: [...family.siblings, newSibling]
+    siblings: [...family.siblings, newSibling],
   };
 };
 
@@ -237,24 +266,27 @@ export const getAvailableActivities = (playerAge: number): FamilyActivity[] => {
 
 // Do an activity with family member
 export const doFamilyActivity = (
-  family: FamilyState, 
-  memberId: string, 
+  family: FamilyState,
+  memberId: string,
   activity: FamilyActivity
 ): FamilyState => {
-  const updateRelationship = (member: FamilyMember): FamilyMember => {
+  const updateRelationship = (member: FamilyMember | null): FamilyMember | null => {
+    if (!member) return member;
     if (member.id === memberId) {
       return {
         ...member,
-        relationship: Math.min(100, member.relationship + activity.effects.relationshipBonus)
+        relationship: Math.min(100, member.relationship + activity.effects.relationshipBonus),
       };
     }
     return member;
   };
-  
+
   return {
+    ...family,
     mother: updateRelationship(family.mother),
     father: updateRelationship(family.father),
-    siblings: family.siblings.map(updateRelationship)
+    secondParent: updateRelationship(family.secondParent ?? null),
+    siblings: family.siblings.map(m => updateRelationship(m) as FamilyMember),
   };
 };
 
