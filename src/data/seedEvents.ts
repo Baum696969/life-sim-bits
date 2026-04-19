@@ -1422,6 +1422,7 @@ export const seedEvents: GameEvent[] = [
     options: [
       opt('Beitreten', { luckDelta: 15, fitnessDelta: 2 }, 'Du findest Gleichgesinnte und schließt Freundschaften! 🎯 [+1 Freund]'),
       opt('Lieber alleine', { luckDelta: -4 }, 'Du machst dein Hobby weiter alleine.'),
+    ],
   },
   // Append all "auto" mini-events (no choice, just narration)
   ...autoEvents,
