@@ -31,6 +31,10 @@ export interface Player {
   inPrison: boolean;
   prisonYearsRemaining: number;
   extraSchoolYears: number; // Optional +2 years after age 16
+  // Identity & origin
+  skinTone?: string;        // SkinToneDef id
+  country?: string;         // ISO country code from COUNTRIES
+  tags?: string[];          // Country/region/family tags for event filtering
 }
 
 export interface Job {
@@ -125,7 +129,9 @@ export type EventCategory =
   | 'education'
   | 'relationship'
   | 'crime'
-  | 'prison';
+  | 'prison'
+  | 'auto'
+  | 'family';
 
 export type MinigameType =
   | 'flappy'
